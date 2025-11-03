@@ -269,7 +269,7 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
                       )}
                       {item.observacoes && (
                         <div className="text-sm text-gray-500 dark:text-gray-500 italic mb-2">
-                          "{item.observacoes}"
+                          &quot;{item.observacoes}&quot;
                         </div>
                       )}
                       <div className="flex items-center gap-3">

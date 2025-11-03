@@ -69,6 +69,7 @@ export default function ModalEditarPedido({ pedido, aberto, onFechar, onSucesso 
       carregarProdutos()
       carregarAdicionais()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedido])
 
   const carregarItensPedido = async () => {

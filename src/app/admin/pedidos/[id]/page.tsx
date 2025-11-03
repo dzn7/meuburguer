@@ -48,6 +48,7 @@ export default function DetalhePedidoPage() {
     if (pedidoId) {
       carregarPedido()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidoId])
 
   const carregarPedido = async () => {

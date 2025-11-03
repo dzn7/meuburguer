@@ -13,6 +13,7 @@ export default function PWAManager() {
     if ('serviceWorker' in navigator) {
       registerServiceWorker()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const registerServiceWorker = async () => {
