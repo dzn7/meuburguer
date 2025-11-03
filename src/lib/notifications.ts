@@ -65,7 +65,7 @@ export async function notificarNovoPedido(pedidoId: string, nomeCliente: string)
         title: 'Fechar'
       }
     ]
-  })
+  } as any)
 
   // Tocar som de notificação
   playNotificationSound()
@@ -91,7 +91,7 @@ export async function notificarPedidoAtualizado(
     data: {
       url: `/admin/pedidos/${pedidoId}`
     }
-  })
+  } as any)
 }
 
 function playNotificationSound(): void {
