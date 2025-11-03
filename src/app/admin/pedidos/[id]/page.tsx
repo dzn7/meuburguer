@@ -17,8 +17,10 @@ type Pedido = {
   nome_cliente: string
   telefone: string
   endereco?: string
-  tipo?: string
+  tipo_entrega: string
   status: string
+  subtotal: number
+  taxa_entrega: number
   total: number
   created_at: string
 }
@@ -307,11 +309,13 @@ export default function DetalhePedidoPage() {
                   <div>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">Tipo de Pedido</p>
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                      pedido.tipo === 'Online' 
-                        ? 'bg-zinc-100 text-zinc-800 dark:bg-blue-900/20 dark:text-blue-400' 
-                        : 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800/20 dark:text-zinc-400'
+                      pedido.tipo_entrega === 'entrega' 
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' 
+                        : pedido.tipo_entrega === 'retirada'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400'
+                        : 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
                     }`}>
-                      {pedido.tipo || 'Presencial'}
+                      {pedido.tipo_entrega === 'entrega' ? 'Entrega' : pedido.tipo_entrega === 'retirada' ? 'Retirada' : 'Consumir no Local'}
                     </span>
                   </div>
                   <div>
