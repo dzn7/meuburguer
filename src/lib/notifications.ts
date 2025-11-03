@@ -32,13 +32,15 @@ export async function showNotification(
   if ('serviceWorker' in navigator) {
     const registration = await navigator.serviceWorker.ready
     
-    await registration.showNotification(title, {
+    const notificationOptions = {
       icon: '/assets/favicon/android-chrome-192x192.png',
       badge: '/assets/favicon/android-chrome-192x192.png',
       vibrate: [200, 100, 200],
       requireInteraction: true,
       ...options
-    })
+    } as any
+    
+    await registration.showNotification(title, notificationOptions)
   } else {
     // Fallback para notificação nativa
     new Notification(title, options)
