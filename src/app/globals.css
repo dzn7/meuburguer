@@ -1,0 +1,231 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Forçar navbar branca no modo claro, escura no modo escuro */
+.MuiAppBar-root {
+  background-color: #ffffff !important;
+}
+
+.dark .MuiAppBar-root {
+  background-color: #18181b !important;
+}
+
+:not(.dark) .MuiAppBar-root {
+  background-color: #ffffff !important;
+  color: #18181b !important;
+}
+
+@layer base {
+  :root {
+    --dourado: 42.1 82.3% 46.3%;
+    --creme: 48 96% 89%;
+    --marrom: 26 55% 50%;
+    --shadow-input: 0px 2px 3px -1px rgba(0,0,0,0.1), 0px 1px 0px 0px rgba(25,28,33,0.02), 0px 0px 0px 1px rgba(25,28,33,0.08);
+    
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 42.1 82.3% 46.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 42.1 82.3% 46.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 42.1 82.3% 46.3%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 42.1 82.3% 46.3%;
+  }
+}
+  
+  body {
+    @apply bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dourado-600 dark:bg-dourado-500 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-dourado-700 dark:bg-dourado-600;
+  }
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-dourado-600 to-dourado-500 text-white font-semibold py-3 px-6 rounded-full 
+           shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-in-out
+           flex items-center justify-center gap-2;
+  }
+
+  .btn-secondary {
+    @apply border-2 border-dourado-600 text-dourado-700 dark:text-dourado-400 
+           font-semibold py-2 px-4 rounded-full hover:bg-dourado-600 hover:text-white 
+           transition-all duration-300;
+  }
+
+  .card-produto {
+    @apply bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl 
+           transition-all duration-300 hover:-translate-y-2 border border-gray-200 dark:border-gray-800;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .modal-content {
+    @apply bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] 
+           flex flex-col overflow-hidden;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .input-campo {
+    @apply w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-700
+           bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+           focus:ring-2 focus:ring-dourado-600 focus:border-transparent 
+           transition-all duration-200;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-dourado-700 via-dourado-600 to-dourado-700;
+  }
+
+  .dark .text-gradient {
+    @apply bg-gradient-to-r from-dourado-500 via-dourado-400 to-dourado-500;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .glassmorphism {
+    @apply bg-white/10 backdrop-blur-lg border border-white/20;
+  }
+
+  .shadow-input {
+    box-shadow: var(--shadow-input);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideInDown {
+  animation: slideInDown 0.3s ease-out;
+}
+
+.logo-text {
+  color: #b8860b;
+  font-weight: 700;
+  position: relative;
+  display: inline-block;
+}
+
+.dark .logo-text {
+  color: #ffd700;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 1000px 100%;
+}
+
