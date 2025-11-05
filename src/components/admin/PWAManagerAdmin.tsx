@@ -60,25 +60,72 @@ export default function PWAManagerAdmin() {
     }
   }
 
-  const handleUpdate = () => {
-    if (registration?.waiting) {
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' })
-      
-      // Aguarda o novo SW assumir controle
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
+  const handleUpdate = async () => {
+    try {
+      if (registration?.waiting) {
+        console.log('[PWA Admin] Ativando nova versão...')
+        
+        // Envia mensagem para o SW waiting
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+        
+        // Aguarda o novo SW assumir controle e recarrega
+        let reloaded = false
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!reloaded) {
+            reloaded = true
+            console.log('[PWA Admin] Nova versão ativada, recarregando...')
+            window.location.reload()
+          }
+        })
+        
+        // Timeout de segurança - recarrega após 2s se não houver controllerchange
+        setTimeout(() => {
+          if (!reloaded) {
+            reloaded = true
+            console.log('[PWA Admin] Timeout - forçando reload')
+            window.location.reload()
+          }
+        }, 2000)
+      } else {
+        // Se não há waiting, apenas recarrega
+        console.log('[PWA Admin] Sem SW waiting, recarregando...')
         window.location.reload()
-      })
+      }
+    } catch (error) {
+      console.error('[PWA Admin] Erro ao atualizar:', error)
+      // Força reload mesmo com erro
+      window.location.reload()
     }
   }
 
   const clearCache = async () => {
-    if (registration) {
-      registration.active?.postMessage({ type: 'CLEAR_CACHE' })
+    try {
+      console.log('[PWA Admin] Limpando cache...')
+      
+      // Limpa todos os caches
+      const cacheNames = await caches.keys()
+      await Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName.includes('admin')) {
+            console.log('[PWA Admin] Removendo cache:', cacheName)
+            return caches.delete(cacheName)
+          }
+        })
+      )
+      
+      // Envia mensagem para o SW
+      if (registration?.active) {
+        registration.active.postMessage({ type: 'CLEAR_CACHE' })
+      }
       
       // Aguarda um pouco e recarrega
       setTimeout(() => {
+        console.log('[PWA Admin] Cache limpo, recarregando...')
         window.location.reload()
       }, 500)
+    } catch (error) {
+      console.error('[PWA Admin] Erro ao limpar cache:', error)
+      window.location.reload()
     }
   }
 

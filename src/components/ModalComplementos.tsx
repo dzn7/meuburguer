@@ -22,6 +22,22 @@ export default function ModalComplementos({ produto, aberto, onFechar, onAbrirCa
   const [busca, setBusca] = useState('')
   const [carregando, setCarregando] = useState(false)
 
+  // Bloqueia scroll do body quando modal está aberto
+  useEffect(() => {
+    if (aberto) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.paddingRight = '0px'
+    } else {
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
+    }
+
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
+    }
+  }, [aberto])
+
   useEffect(() => {
     if (aberto && produto) {
       carregarAdicionais()

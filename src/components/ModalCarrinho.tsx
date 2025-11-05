@@ -40,6 +40,22 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
   const taxaEntrega = tipoEntrega === 'entrega' ? 2.0 : 0
   const totalFinal = total + taxaEntrega
 
+  // Bloqueia scroll do body quando modal está aberto
+  useEffect(() => {
+    if (aberto) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.paddingRight = '0px' // Evita shift de layout
+    } else {
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
+    }
+
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
+    }
+  }, [aberto])
+
   useEffect(() => {
     if (aberto && itens.length > 0) {
       const temBebida = itens.some(item => item.produto.categoria === 'Bebidas')
