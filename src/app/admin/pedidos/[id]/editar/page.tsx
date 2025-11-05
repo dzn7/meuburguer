@@ -1,19 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  TextField,
-  Button,
-  Grid,
-  MenuItem,
-  IconButton,
-  CircularProgress,
-} from '@mui/material'
-import { ArrowBack, Save } from '@mui/icons-material'
+import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import { useRouter, useParams } from 'next/navigation'
 import ProtectedRoute from '@/components/admin/ProtectedRoute'
 import AdminLayout from '@/components/admin/AdminLayout'
@@ -106,9 +94,9 @@ export default function EditarPedidoPage() {
     return (
       <ProtectedRoute>
         <AdminLayout>
-          <Box className="flex justify-center items-center h-96">
-            <CircularProgress className="text-dourado-600" />
-          </Box>
+          <div className="flex justify-center items-center h-96">
+            <Loader2 className="w-8 h-8 text-dourado-600 animate-spin" />
+          </div>
         </AdminLayout>
       </ProtectedRoute>
     )
@@ -118,18 +106,17 @@ export default function EditarPedidoPage() {
     return (
       <ProtectedRoute>
         <AdminLayout>
-          <Box className="text-center py-12">
-            <Typography variant="h6" className="text-gray-500 dark:text-gray-400">
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold text-gray-500 dark:text-gray-400 mb-4">
               Pedido não encontrado
-            </Typography>
-            <Button
-              variant="contained"
+            </h2>
+            <button
               onClick={() => router.push('/admin/pedidos')}
-              className="mt-4 bg-dourado-600"
+              className="px-6 py-2.5 bg-dourado-600 hover:bg-dourado-700 text-white rounded-lg font-medium transition-colors"
             >
               Voltar para Pedidos
-            </Button>
-          </Box>
+            </button>
+          </div>
         </AdminLayout>
       </ProtectedRoute>
     )
@@ -138,134 +125,138 @@ export default function EditarPedidoPage() {
   return (
     <ProtectedRoute>
       <AdminLayout>
-        <Box>
-          <Box className="flex items-center gap-4 mb-6">
-            <IconButton onClick={() => router.back()} className="text-gray-900 dark:text-white">
-              <ArrowBack />
-            </IconButton>
-            <Typography variant="h4" className="font-bold text-gray-900 dark:text-white">
+        <div>
+          <div className="flex items-center gap-4 mb-6">
+            <button 
+              onClick={() => router.back()} 
+              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5 text-zinc-900 dark:text-white" />
+            </button>
+            <h1 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white">
               Editar Pedido #{pedido.id.slice(0, 8).toUpperCase()}
-            </Typography>
-          </Box>
+            </h1>
+          </div>
 
-          <Grid container spacing={3}>
-            {/* @ts-ignore */}
-            <Grid item xs={12} md={8}>
-              <Card className="bg-white dark:bg-gray-900 shadow-lg">
-                <CardContent>
-                  <Typography variant="h6" className="font-bold mb-4">
-                    Dados do Cliente
-                  </Typography>
-                  <Grid container spacing={3}>
-                    {/* @ts-ignore */}
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Nome do Cliente *"
-                        value={nomeCliente}
-                        onChange={(e) => setNomeCliente(e.target.value)}
-                        required
-                      />
-                    </Grid>
-                    {/* @ts-ignore */}
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Telefone *"
-                        value={telefone}
-                        onChange={(e) => setTelefone(e.target.value)}
-                        required
-                      />
-                    </Grid>
-                    {/* @ts-ignore */}
-                    <Grid item xs={12}>
-                      <TextField
-                        fullWidth
-                        label="Endereço"
-                        value={endereco}
-                        onChange={(e) => setEndereco(e.target.value)}
-                        multiline
-                        rows={2}
-                      />
-                    </Grid>
-                    {/* @ts-ignore */}
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        select
-                        label="Tipo de Pedido"
-                        value={tipoEntrega}
-                        onChange={(e) => setTipoEntrega(e.target.value)}
-                      >
-                        <MenuItem value="entrega">Entrega</MenuItem>
-                        <MenuItem value="retirada">Retirada</MenuItem>
-                        <MenuItem value="local">Consumir no Local</MenuItem>
-                      </TextField>
-                    </Grid>
-                    {/* @ts-ignore */}
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        select
-                        label="Status"
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value)}
-                      >
-                        <MenuItem value="Pendente">Pendente</MenuItem>
-                        <MenuItem value="Em Preparo">Em Preparo</MenuItem>
-                        <MenuItem value="Pronto">Pronto</MenuItem>
-                        <MenuItem value="Entregue">Entregue</MenuItem>
-                        <MenuItem value="Cancelado">Cancelado</MenuItem>
-                      </TextField>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* @ts-ignore */}
-            <Grid item xs={12} md={4}>
-              <Card className="bg-white dark:bg-gray-900 shadow-lg sticky top-4">
-                <CardContent>
-                  <Typography variant="h6" className="font-bold mb-4">
-                    Ações
-                  </Typography>
-                  <Box className="space-y-3">
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      size="large"
-                      startIcon={salvando ? <CircularProgress size={20} /> : <Save />}
-                      onClick={salvarAlteracoes}
-                      disabled={salvando}
-                      className="bg-dourado-600 hover:bg-dourado-700"
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-800 p-6">
+                <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-6">
+                  Dados do Cliente
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      Nome do Cliente *
+                    </label>
+                    <input
+                      type="text"
+                      value={nomeCliente}
+                      onChange={(e) => setNomeCliente(e.target.value)}
+                      required
+                      className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-dourado-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      Telefone *
+                    </label>
+                    <input
+                      type="tel"
+                      value={telefone}
+                      onChange={(e) => setTelefone(e.target.value)}
+                      required
+                      className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-dourado-500 focus:border-transparent transition-all"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      Endereço
+                    </label>
+                    <textarea
+                      value={endereco}
+                      onChange={(e) => setEndereco(e.target.value)}
+                      rows={2}
+                      className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-dourado-500 focus:border-transparent transition-all resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      Tipo de Pedido
+                    </label>
+                    <select
+                      value={tipoEntrega}
+                      onChange={(e) => setTipoEntrega(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-dourado-500 focus:border-transparent transition-all"
                     >
-                      {salvando ? 'Salvando...' : 'Salvar Alterações'}
-                    </Button>
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      size="large"
-                      onClick={() => router.back()}
-                      disabled={salvando}
-                      className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                      <option value="entrega">Entrega</option>
+                      <option value="retirada">Retirada</option>
+                      <option value="local">Consumir no Local</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:ring-2 focus:ring-dourado-500 focus:border-transparent transition-all"
                     >
-                      Cancelar
-                    </Button>
-                  </Box>
+                      <option value="Pendente">Pendente</option>
+                      <option value="Em Preparo">Em Preparo</option>
+                      <option value="Pronto">Pronto</option>
+                      <option value="Entregue">Entregue</option>
+                      <option value="Cancelado">Cancelado</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                  <Box className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                    <Typography variant="body2" className="text-blue-800 dark:text-blue-400">
-                      <strong>Nota:</strong> Esta página permite editar apenas os dados do
-                      cliente e o status do pedido. Os itens do pedido não podem ser
-                      alterados após a criação.
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Box>
+            <div>
+              <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-800 p-6 sticky top-4">
+                <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
+                  Ações
+                </h2>
+                <div className="space-y-3">
+                  <button
+                    onClick={salvarAlteracoes}
+                    disabled={salvando}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-dourado-600 hover:bg-dourado-700 disabled:bg-dourado-400 text-white rounded-lg font-medium transition-colors"
+                  >
+                    {salvando ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5" />
+                        Salvar Alterações
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => router.back()}
+                    disabled={salvando}
+                    className="w-full px-6 py-3 border-2 border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 rounded-lg font-medium transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
+                  <p className="text-sm text-blue-800 dark:text-blue-400">
+                    <strong>Nota:</strong> Esta página permite editar apenas os dados do
+                    cliente e o status do pedido. Os itens do pedido não podem ser
+                    alterados após a criação.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </AdminLayout>
     </ProtectedRoute>
   )

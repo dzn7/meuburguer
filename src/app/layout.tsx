@@ -4,6 +4,7 @@ import './globals.css'
 import ThemeProvider from '@/providers/ThemeProvider'
 import { CarrinhoProvider } from '@/contexts/CarrinhoContext'
 import PWAManager from '@/components/PWAManager'
+import ManifestManager from '@/components/ManifestManager'
 import Script from 'next/script'
 
 const poppins = Poppins({ 
@@ -43,7 +44,6 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/assets/favicon/favicon.ico" />
         <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png" />
@@ -56,6 +56,7 @@ export default function RootLayout({
       <body className={poppins.className}>
         <ThemeProvider>
           <CarrinhoProvider>
+            <ManifestManager />
             <PWAManager />
             {children}
           </CarrinhoProvider>

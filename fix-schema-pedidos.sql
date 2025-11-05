@@ -29,11 +29,10 @@ DROP CONSTRAINT IF EXISTS pedidos_status_check;
 SELECT 'pedidos' as tabela, column_name, data_type 
 FROM information_schema.columns 
 WHERE table_name = 'pedidos' 
-ORDER BY ordinal_position
 
 UNION ALL
 
 SELECT 'itens_pedido' as tabela, column_name, data_type 
 FROM information_schema.columns 
-WHERE table_name = 'itens_pedido' 
-ORDER BY ordinal_position;
+WHERE table_name = 'itens_pedido'
+ORDER BY tabela, data_type;

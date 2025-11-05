@@ -246,14 +246,19 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
                 {itens.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 flex gap-4 items-start"
+                    className="relative bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-900 dark:to-gray-800/50 
+                             rounded-xl p-4 pr-12 sm:pr-16 flex gap-4 items-start
+                             border border-gray-200/50 dark:border-gray-700/50
+                             hover:shadow-md transition-all duration-300"
                   >
-                    <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
+                    <div className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden 
+                                  bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900
+                                  shadow-inner group">
                       <Image
                         src={item.produto.imagem_url}
                         alt={item.produto.nome}
                         fill
-                        className="object-cover"
+                        className="object-cover group-hover:scale-110 transition-transform duration-300"
                         sizes="80px"
                       />
                     </div>
@@ -296,7 +301,7 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
 
                     <button
                       onClick={() => removerItem(item.id)}
-                      className="text-red-500 hover:text-red-700 transition-colors p-2"
+                      className="absolute top-3 right-3 text-red-500 hover:text-red-600 dark:hover:text-red-400 transition-transform duration-200 p-2 rounded-full hover:bg-red-50/70 dark:hover:bg-red-500/10 hover:-translate-y-0.5"
                       aria-label="Remover item"
                     >
                       <Trash2 className="w-5 h-5" />

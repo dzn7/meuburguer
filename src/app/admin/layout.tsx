@@ -4,7 +4,7 @@ import { AdminAuthProvider } from '@/contexts/AdminAuthContext'
 import { useEffect } from 'react'
 import { setupRealtimeNotifications, requestNotificationPermission } from '@/lib/notifications'
 import { supabase } from '@/lib/supabase'
-import Head from 'next/head'
+import PWAManagerAdmin from '@/components/admin/PWAManagerAdmin'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -18,12 +18,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [])
 
   return (
-    <>
-      <Head>
-        <link rel="manifest" href="/manifest-admin.json" />
-      </Head>
-      <AdminAuthProvider>{children}</AdminAuthProvider>
-    </>
+    <AdminAuthProvider>
+      <PWAManagerAdmin />
+      {children}
+    </AdminAuthProvider>
   )
 }
 

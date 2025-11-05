@@ -141,16 +141,20 @@ export default function ModalComplementos({ produto, aberto, onFechar, onAbrirCa
                   >
                     {selecionado && (
                       <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-dourado-600 to-dourado-500 
-                                    rounded-full flex items-center justify-center shadow-lg">
+                                    rounded-full flex items-center justify-center shadow-lg z-10
+                                    animate-[pulse_1s_ease-in-out_infinite]">
                         <Check className="w-4 h-4 text-white" />
                       </div>
                     )}
-                    <div className="relative w-16 h-16 mb-2">
+                    <div className="relative w-16 h-16 mb-2 rounded-lg overflow-hidden
+                                  bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900
+                                  shadow-inner">
                       <Image
                         src={adicional.imagem_url}
                         alt={adicional.nome}
                         fill
-                        className="object-contain"
+                        className="object-contain p-2 transition-transform duration-300
+                                 group-hover:scale-110"
                         sizes="64px"
                       />
                     </div>

@@ -1,20 +1,15 @@
-// Service Worker com versionamento inteligente
-const CACHE_VERSION = 'v1.0.0'
-const CACHE_NAME = `meu-burguer-${CACHE_VERSION}`
-const ADMIN_CACHE_NAME = `meu-burguer-admin-${CACHE_VERSION}`
+// Service Worker EXCLUSIVO para Cliente (Cardápio)
+const CACHE_VERSION = 'client-v1.0.1'
+const CACHE_NAME = `meu-burguer-client-${CACHE_VERSION}`
 
-// Arquivos para cache do cliente
+// Cache mínimo - apenas essenciais
 const CLIENT_ASSETS = [
   '/',
   '/offline.html',
 ]
 
-// Arquivos para cache do admin
-const ADMIN_ASSETS = [
-  '/admin/dashboard',
-  '/admin/pedidos',
-  '/admin/produtos',
-]
+// Tempo máximo de cache (10 minutos)
+const MAX_CACHE_AGE = 10 * 60 * 1000
 
 // Estratégia de cache
 const CACHE_STRATEGIES = {
@@ -25,44 +20,41 @@ const CACHE_STRATEGIES = {
 
 // Instalar Service Worker
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando versão:', CACHE_VERSION)
+  console.log('[SW Cliente] Instalando versão:', CACHE_VERSION)
   
   event.waitUntil(
-    Promise.all([
-      caches.open(CACHE_NAME).then((cache) => {
-        console.log('[SW] Cache cliente criado')
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('[SW Cliente] Cache criado')
         return cache.addAll(CLIENT_ASSETS)
-      }),
-      caches.open(ADMIN_CACHE_NAME).then((cache) => {
-        console.log('[SW] Cache admin criado')
-        return cache.addAll(ADMIN_ASSETS)
       })
-    ]).then(() => {
-      // Força ativação imediata
-      return self.skipWaiting()
-    })
+      .then(() => self.skipWaiting())
   )
 })
 
 // Ativar Service Worker e limpar caches antigos
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Ativando versão:', CACHE_VERSION)
+  console.log('[SW Cliente] Ativando versão:', CACHE_VERSION)
   
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          // Remove caches de versões antigas
-          if (cacheName !== CACHE_NAME && cacheName !== ADMIN_CACHE_NAME) {
-            console.log('[SW] Removendo cache antigo:', cacheName)
-            return caches.delete(cacheName)
-          }
-        })
-      )
-    }).then(() => {
-      // Toma controle de todas as páginas imediatamente
-      return self.clients.claim()
-    })
+    caches.keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            // Remove apenas caches antigos do CLIENTE (não toca no admin)
+            if (cacheName.includes('client') && cacheName !== CACHE_NAME) {
+              console.log('[SW Cliente] Removendo cache antigo:', cacheName)
+              return caches.delete(cacheName)
+            }
+            // Remove caches sem prefixo (versões antigas)
+            if (cacheName.startsWith('meu-burguer-v') || cacheName === 'meu-burguer-admin-v1.0.0') {
+              console.log('[SW Cliente] Removendo cache legado:', cacheName)
+              return caches.delete(cacheName)
+            }
+          })
+        )
+      })
+      .then(() => self.clients.claim())
   )
 })
 
@@ -76,53 +68,82 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Ignora requisições do Supabase (sempre busca da rede)
-  if (url.hostname.includes('supabase')) {
+  // NÃO processa requisições do /admin (deixa para sw-admin.js)
+  if (url.pathname.startsWith('/admin')) {
+    return
+  }
+
+  // Ignora requisições do Supabase e API (sempre rede)
+  if (url.hostname.includes('supabase') || url.pathname.startsWith('/api')) {
     return event.respondWith(fetch(request))
   }
 
-  // Determina estratégia baseada no tipo de requisição
-  if (url.pathname.startsWith('/admin')) {
-    event.respondWith(networkFirst(request, ADMIN_CACHE_NAME))
-  } else if (url.pathname.startsWith('/_next/static')) {
-    event.respondWith(cacheFirst(request, CACHE_NAME))
-  } else if (url.pathname.startsWith('/api')) {
-    event.respondWith(networkOnly(request))
+  // Estratégias para cliente
+  if (url.pathname.startsWith('/_next/static')) {
+    event.respondWith(cacheFirst(request))
   } else {
-    event.respondWith(staleWhileRevalidate(request, CACHE_NAME))
+    event.respondWith(networkFirstWithTimeout(request))
   }
 })
 
-// Estratégia: Network First (tenta rede primeiro, fallback para cache)
-async function networkFirst(request, cacheName) {
+// Network First com timeout
+async function networkFirstWithTimeout(request) {
+  const TIMEOUT = 3000 // 3 segundos
+
   try {
-    const networkResponse = await fetch(request)
-    
-    if (networkResponse.ok) {
-      const cache = await caches.open(cacheName)
-      cache.put(request, networkResponse.clone())
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT)
+
+    const networkResponse = await fetch(request, {
+      signal: controller.signal
+    })
+
+    clearTimeout(timeoutId)
+
+    if (networkResponse && networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME)
+      const responseToCache = networkResponse.clone()
+      const headers = new Headers(responseToCache.headers)
+      headers.append('sw-cache-time', Date.now().toString())
+      
+      const modifiedResponse = new Response(responseToCache.body, {
+        status: responseToCache.status,
+        statusText: responseToCache.statusText,
+        headers: headers
+      })
+      
+      cache.put(request, modifiedResponse)
     }
-    
+
     return networkResponse
   } catch (error) {
-    console.log('[SW] Network failed, usando cache:', request.url)
+    console.log('[SW Cliente] Rede falhou, tentando cache:', request.url)
     const cachedResponse = await caches.match(request)
-    
+
     if (cachedResponse) {
+      const cacheTime = cachedResponse.headers.get('sw-cache-time')
+      if (cacheTime) {
+        const age = Date.now() - parseInt(cacheTime)
+        if (age > MAX_CACHE_AGE) {
+          console.log('[SW Cliente] Cache expirado')
+          const cache = await caches.open(CACHE_NAME)
+          cache.delete(request)
+          throw new Error('Cache expirado')
+        }
+      }
       return cachedResponse
     }
-    
-    // Retorna página offline se disponível
+
     if (request.mode === 'navigate') {
       return caches.match('/offline.html')
     }
-    
+
     throw error
   }
 }
 
-// Estratégia: Cache First (usa cache primeiro, fallback para rede)
-async function cacheFirst(request, cacheName) {
+// Cache First para assets estáticos
+async function cacheFirst(request) {
   const cachedResponse = await caches.match(request)
   
   if (cachedResponse) {
@@ -133,39 +154,39 @@ async function cacheFirst(request, cacheName) {
     const networkResponse = await fetch(request)
     
     if (networkResponse.ok) {
-      const cache = await caches.open(cacheName)
+      const cache = await caches.open(CACHE_NAME)
       cache.put(request, networkResponse.clone())
     }
     
     return networkResponse
   } catch (error) {
-    console.error('[SW] Falha ao buscar:', request.url)
+    console.error('[SW Cliente] Falha ao buscar:', request.url)
     throw error
   }
 }
 
-// Estratégia: Stale While Revalidate (retorna cache e atualiza em background)
-async function staleWhileRevalidate(request, cacheName) {
-  const cachedResponse = await caches.match(request)
+// Listener para mensagens
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW Cliente] Forçando atualização')
+    self.skipWaiting()
+  }
   
-  const fetchPromise = fetch(request).then(async (networkResponse) => {
-    if (networkResponse && networkResponse.ok) {
-      try {
-        const cache = await caches.open(cacheName)
-        // Clone antes de usar
-        await cache.put(request, networkResponse.clone())
-      } catch (error) {
-        console.warn('[SW] Erro ao cachear:', error)
-      }
-    }
-    return networkResponse
-  }).catch((error) => {
-    console.warn('[SW] Fetch falhou:', error)
-    return cachedResponse
-  })
-  
-  return cachedResponse || fetchPromise
-}
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    console.log('[SW Cliente] Limpando cache')
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName.includes('client')) {
+              return caches.delete(cacheName)
+            }
+          })
+        )
+      })
+    )
+  }
+})
 
 // Estratégia: Network Only (sempre busca da rede)
 async function networkOnly(request) {

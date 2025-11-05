@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { GlassWater, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { Bebida, supabase } from '@/lib/supabase'
 import { useCarrinho } from '@/contexts/CarrinhoContext'
@@ -93,31 +94,54 @@ export default function SugestaoBebidas({ mostrar, onFechar }: SugestaoBebidaPro
             Complete seu pedido com uma deliciosa bebida gelada!
           </p>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {bebidas.map((bebida) => (
           <button
             key={bebida.id}
             onClick={() => adicionarBebida(bebida)}
-            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 
-                     rounded-lg p-3 hover:border-dourado-400 dark:hover:border-dourado-600 
-                     hover:shadow-md transition-all duration-300 text-left group"
+            className="bg-white dark:bg-[#101010] border border-gray-200/80 dark:border-gray-800 
+                     rounded-xl p-3 hover:border-dourado-400 dark:hover:border-dourado-600 
+                     hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_12px_32px_rgba(0,0,0,0.35)]
+                     transition-all duration-300 text-left group flex items-center gap-3"
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold text-sm text-gray-900 dark:text-white group-hover:text-dourado-600 dark:group-hover:text-dourado-400 transition-colors">
-                {bebida.nome}
-              </span>
+            <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden
+                            bg-gradient-to-br from-creme-100 via-white to-dourado-50/60
+                            dark:from-[#0d0d0d] dark:via-[#141414] dark:to-[#1a1a1a]
+                            border border-white/60 dark:border-white/10">
+              {bebida.imagem_url ? (
+                <Image
+                  src={bebida.imagem_url}
+                  alt={bebida.nome}
+                  fill
+                  className="object-contain p-1 transition-transform duration-500 group-hover:scale-110"
+                  sizes="64px"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-2xl">
+                  🥤
+                </div>
+              )}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500
+                              bg-gradient-to-br from-white/10 via-transparent to-dourado-500/30 dark:to-dourado-900/25" />
             </div>
-            {bebida.tamanho && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 block mb-2">
-                {bebida.tamanho}
-              </span>
-            )}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-dourado-600 dark:text-dourado-400">
-                R$ {bebida.preco.toFixed(2)}
-              </span>
-              <span className="text-xs text-dourado-600 dark:text-dourado-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                Adicionar →
+
+            <div className="flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-semibold text-sm text-gray-900 dark:text-white group-hover:text-dourado-600 dark:group-hover:text-dourado-400 transition-colors">
+                  {bebida.nome}
+                </span>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 group-hover:text-dourado-500 dark:group-hover:text-dourado-400 transition-colors">
+                  R$ {bebida.preco.toFixed(2)}
+                </span>
+              </div>
+              {bebida.tamanho && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
+                  {bebida.tamanho}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold mt-2 text-dourado-600 dark:text-dourado-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                Adicionar
+                <span aria-hidden className="translate-x-0 group-hover:translate-x-1 transition-transform">→</span>
               </span>
             </div>
           </button>

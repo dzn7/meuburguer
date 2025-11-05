@@ -116,14 +116,14 @@ export default function Home() {
   const produtosDestaque = produtos.filter((p) => p.destaque)
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
 
       <main className="pt-24 pb-24">
-        <section className="relative overflow-hidden bg-gradient-to-br from-creme-50 via-white to-dourado-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 py-16 md:py-24">
-          <div className="absolute inset-0 opacity-10 dark:opacity-5">
-            <div className="absolute top-20 left-10 w-64 h-64 bg-dourado-400 dark:bg-dourado-600 rounded-full blur-3xl animate-float" />
-            <div className="absolute bottom-20 right-10 w-96 h-96 bg-creme-400 dark:bg-dourado-500 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+        <section className="relative overflow-hidden bg-gradient-to-br from-creme-50 via-white to-dourado-50 dark:from-zinc-950 dark:via-black dark:to-zinc-950 py-16 md:py-24">
+          <div className="absolute inset-0 opacity-10 dark:opacity-[0.07]">
+            <div className="absolute top-20 left-10 w-64 h-64 bg-dourado-400 dark:bg-dourado-600/40 rounded-full blur-3xl animate-float" />
+            <div className="absolute bottom-20 right-10 w-96 h-96 bg-creme-400 dark:bg-dourado-500/30 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
           </div>
 
           <div className="container mx-auto px-4 relative z-10">
@@ -135,7 +135,7 @@ export default function Home() {
                 </span>
               </h1>
 
-              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-8 max-w-2xl mx-auto">
+              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
                 Hambúrgueres artesanais preparados com ingredientes selecionados. 
                 Peça agora e receba quentinho em sua casa!
               </p>
@@ -154,7 +154,7 @@ export default function Home() {
         </section>
 
         {produtosDestaque.length > 0 && (
-          <section className="py-12 bg-gray-50 dark:bg-gray-900/50">
+          <section className="py-12 bg-gray-50 dark:bg-zinc-950/10">
             <div className="container mx-auto px-4">
               <div className="flex items-center gap-3 mb-8">
                 <div className="h-1 w-12 bg-gradient-to-r from-dourado-600 to-dourado-400 rounded-full" />

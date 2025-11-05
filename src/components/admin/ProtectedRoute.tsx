@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/contexts/AdminAuthContext'
-import { Box, CircularProgress } from '@mui/material'
+import { Loader2 } from 'lucide-react'
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAdminAuth()
@@ -17,9 +17,9 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   if (loading) {
     return (
-      <Box className="flex items-center justify-center min-h-screen">
-        <CircularProgress className="text-dourado-600" />
-      </Box>
+      <div className="flex items-center justify-center min-h-screen bg-zinc-50 dark:bg-zinc-950">
+        <Loader2 className="w-8 h-8 text-dourado-600 animate-spin" />
+      </div>
     )
   }
 
