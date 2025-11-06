@@ -197,18 +197,20 @@ export default function NotificationButton() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999]
-                       w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl 
-                       border border-zinc-200 dark:border-zinc-800 overflow-hidden"
+              className="fixed inset-4 md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 
+                       md:inset-auto z-[9999] w-auto md:w-full md:max-w-md 
+                       bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl 
+                       border border-zinc-200 dark:border-zinc-800 overflow-hidden
+                       max-h-[90vh] md:max-h-[85vh] flex flex-col"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-6 text-white">
+              <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4 md:p-6 text-white flex-shrink-0">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                      <Bell className="w-6 h-6" />
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="p-1.5 md:p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <Bell className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <h3 className="text-xl font-bold">Notificações</h3>
+                    <h3 className="text-lg md:text-xl font-bold">Notificações</h3>
                   </div>
                   <button
                     onClick={() => setIsOpen(false)}
@@ -217,13 +219,13 @@ export default function NotificationButton() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                <p className="text-amber-50 text-sm">
+                <p className="text-amber-50 text-xs md:text-sm">
                   Receba alertas em tempo real sobre novos pedidos
                 </p>
               </div>
 
               {/* Content */}
-              <div className="p-6 space-y-6">
+              <div className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto flex-1">
                 {showSuccessMessage ? (
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
@@ -246,59 +248,59 @@ export default function NotificationButton() {
                     {!notificationsEnabled ? (
                       <>
                         <div className="text-center">
-                          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/20 rounded-full 
-                                        flex items-center justify-center mx-auto mb-4">
-                            <Bell className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                          <div className="w-14 h-14 md:w-16 md:h-16 bg-amber-100 dark:bg-amber-900/20 rounded-full 
+                                        flex items-center justify-center mx-auto mb-3 md:mb-4">
+                            <Bell className="w-7 h-7 md:w-8 md:h-8 text-amber-600 dark:text-amber-400" />
                           </div>
-                          <h4 className="text-lg font-semibold text-zinc-900 dark:text-white mb-2">
+                          <h4 className="text-base md:text-lg font-semibold text-zinc-900 dark:text-white mb-2">
                             Ativar Notificações Push?
                           </h4>
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                          <p className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400">
                             Receba alertas instantâneos quando novos pedidos chegarem, 
                             mesmo com o navegador minimizado.
                           </p>
                         </div>
 
-                        <div className="space-y-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-4">
-                          <div className="flex items-start gap-3">
-                            <Check className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                        <div className="space-y-2.5 md:space-y-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-3 md:p-4">
+                          <div className="flex items-start gap-2 md:gap-3">
+                            <Check className="w-4 h-4 md:w-5 md:h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                             <div>
-                              <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                              <p className="text-xs md:text-sm font-medium text-zinc-900 dark:text-white">
                                 Alertas em Tempo Real
                               </p>
-                              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                              <p className="text-[10px] md:text-xs text-zinc-600 dark:text-zinc-400">
                                 Seja notificado instantaneamente sobre novos pedidos
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-start gap-3">
-                            <Check className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                          <div className="flex items-start gap-2 md:gap-3">
+                            <Check className="w-4 h-4 md:w-5 md:h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                             <div>
-                              <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                              <p className="text-xs md:text-sm font-medium text-zinc-900 dark:text-white">
                                 Notificações com Som
                               </p>
-                              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                              <p className="text-[10px] md:text-xs text-zinc-600 dark:text-zinc-400">
                                 Ouça um alerta sonoro para não perder nenhum pedido
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-start gap-3">
-                            <Check className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                          <div className="flex items-start gap-2 md:gap-3">
+                            <Check className="w-4 h-4 md:w-5 md:h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                             <div>
-                              <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                              <p className="text-xs md:text-sm font-medium text-zinc-900 dark:text-white">
                                 Funciona em Segundo Plano
                               </p>
-                              <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                              <p className="text-[10px] md:text-xs text-zinc-600 dark:text-zinc-400">
                                 Receba notificações mesmo com a aba minimizada
                               </p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex gap-2 md:gap-3">
                           <button
                             onClick={() => setIsOpen(false)}
-                            className="flex-1 px-4 py-3 text-sm font-medium text-zinc-700 dark:text-zinc-300
+                            className="flex-1 px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-medium text-zinc-700 dark:text-zinc-300
                                      bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700
                                      rounded-xl transition-colors"
                           >
@@ -307,22 +309,23 @@ export default function NotificationButton() {
                           <button
                             onClick={handleEnableNotifications}
                             disabled={loading}
-                            className="flex-1 px-4 py-3 text-sm font-medium text-white
+                            className="flex-1 px-3 md:px-4 py-2.5 md:py-3 text-xs md:text-sm font-medium text-white
                                      bg-gradient-to-r from-amber-500 to-amber-600 
                                      hover:from-amber-600 hover:to-amber-700
                                      rounded-xl transition-all shadow-lg hover:shadow-xl
                                      disabled:opacity-50 disabled:cursor-not-allowed
-                                     flex items-center justify-center gap-2"
+                                     flex items-center justify-center gap-1.5 md:gap-2"
                           >
                             {loading ? (
                               <>
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                Ativando...
+                                <div className="w-3.5 h-3.5 md:w-4 md:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <span className="hidden sm:inline">Ativando...</span>
                               </>
                             ) : (
                               <>
-                                <Bell className="w-4 h-4" />
-                                Ativar Notificações
+                                <Bell className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                <span className="hidden sm:inline">Ativar Notificações</span>
+                                <span className="sm:hidden">Ativar</span>
                               </>
                             )}
                           </button>
