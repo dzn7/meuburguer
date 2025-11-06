@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
 
 export default function PWAManagerAdmin() {
@@ -8,6 +8,7 @@ export default function PWAManagerAdmin() {
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isClearingCache, setIsClearingCache] = useState(false)
+  const hasReloadedRef = useRef(false)
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -61,7 +62,9 @@ export default function PWAManagerAdmin() {
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         console.log('[PWA Admin] Novo Service Worker ativado')
         // Recarrega apenas uma vez quando o controle mudar
-        if (!isUpdating) {
+        if (!hasReloadedRef.current) {
+          hasReloadedRef.current = true
+          console.log('[PWA Admin] Recarregando página...')
           window.location.reload()
         }
       })
