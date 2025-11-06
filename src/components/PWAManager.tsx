@@ -1,66 +1,114 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { useEffect, useState, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
+
+// Flag global para prevenir múltiplos reloads
+let isReloading = false
 
 export default function PWAManager() {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
-  const pathname = usePathname()
-  const isAdmin = pathname?.startsWith('/admin')
+  const controllerChangeHandledRef = useRef(false)
+  const updateCheckIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      registerServiceWorker()
+    // Previne execução no servidor
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // Verifica se já está recarregando
+    const reloadFlag = sessionStorage.getItem('pwa_client_reloading')
+    if (reloadFlag === 'true') {
+      console.log('[PWA] Reload em progresso, aguardando...')
+      sessionStorage.removeItem('pwa_client_reloading')
+      return
+    }
+
+    registerServiceWorker()
+
+    // Cleanup ao desmontar
+    return () => {
+      if (updateCheckIntervalRef.current) {
+        clearInterval(updateCheckIntervalRef.current)
+      }
+    }
   }, [])
 
   const registerServiceWorker = async () => {
     try {
+      console.log('[PWA] Iniciando registro do Service Worker')
+
+      // Registra o service worker
       const reg = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
         updateViaCache: 'none'
       })
 
-      console.log('[PWA] Service Worker registrado:', reg.scope)
+      console.log('[PWA] Service Worker registrado com sucesso')
       setRegistration(reg)
 
-      // Verificar atualizações a cada 60 segundos
-      setInterval(() => {
-        reg.update()
-      }, 60000)
+      // Verifica se já existe uma atualização esperando
+      if (reg.waiting) {
+        console.log('[PWA] Atualização já disponível')
+        setUpdateAvailable(true)
+      }
 
-      // Listener para atualizações
+      // Listener para novas atualizações encontradas
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing
+        console.log('[PWA] Nova atualização encontrada')
         
         if (newWorker) {
           newWorker.addEventListener('statechange', () => {
+            console.log('[PWA] Estado do novo SW:', newWorker.state)
+            
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[PWA] Nova versão disponível')
+              console.log('[PWA] Nova versão instalada e pronta')
               setUpdateAvailable(true)
             }
           })
         }
       })
 
-      // Listener para quando o novo SW assumir controle
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('[PWA] Novo Service Worker ativado')
-        // Recarrega apenas uma vez quando o controle mudar
-        if (!isUpdating) {
-          window.location.reload()
+      // Listener único para mudança de controller
+      const handleControllerChange = () => {
+        console.log('[PWA] Controller mudou')
+        
+        // Previne múltiplas execuções
+        if (controllerChangeHandledRef.current || isReloading) {
+          console.log('[PWA] Controller change já tratado, ignorando')
+          return
         }
-      })
 
-      // Solicitar permissão para notificações (apenas admin)
-      if (isAdmin && 'Notification' in window && Notification.permission === 'default') {
-        const permission = await Notification.requestPermission()
-        console.log('[PWA] Permissão de notificação:', permission)
+        controllerChangeHandledRef.current = true
+        isReloading = true
+        
+        // Marca no sessionStorage para prevenir loops
+        sessionStorage.setItem('pwa_client_reloading', 'true')
+        
+        console.log('[PWA] Recarregando página após atualização...')
+        
+        // Pequeno delay para garantir que o novo SW assumiu controle
+        setTimeout(() => {
+          window.location.reload()
+        }, 100)
       }
+
+      // Remove listener anterior se existir
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
+      // Adiciona novo listener
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
+
+      // Verifica atualizações periodicamente (60 segundos)
+      updateCheckIntervalRef.current = setInterval(() => {
+        console.log('[PWA] Verificando atualizações...')
+        reg.update().catch(err => {
+          console.warn('[PWA] Erro ao verificar atualização:', err)
+        })
+      }, 60000)
 
     } catch (error) {
       console.error('[PWA] Erro ao registrar Service Worker:', error)
@@ -69,24 +117,23 @@ export default function PWAManager() {
 
   const handleUpdate = async () => {
     if (!registration?.waiting) {
-      console.warn('[PWA] Nenhuma atualização disponível')
+      console.warn('[PWA] Nenhum SW esperando')
       setUpdateAvailable(false)
       return
     }
 
     try {
       setIsUpdating(true)
-      console.log('[PWA] Iniciando atualização...')
+      console.log('[PWA] Enviando SKIP_WAITING para o SW')
       
-      // Envia mensagem para o SW waiting
+      // Envia mensagem para o SW waiting pular a espera
       registration.waiting.postMessage({ type: 'SKIP_WAITING' })
       
-      // O reload será feito pelo listener 'controllerchange'
+      // O reload será automático via controllerchange
     } catch (error) {
       console.error('[PWA] Erro ao atualizar:', error)
       setIsUpdating(false)
-      // Em caso de erro, força reload
-      window.location.reload()
+      setUpdateAvailable(false)
     }
   }
 
