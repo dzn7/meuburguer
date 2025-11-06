@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ShoppingCart, DollarSign, TrendingUp, Clock, Eye, Edit2, FileText, Trash2 } from 'lucide-react'
+import { ShoppingCart, DollarSign, TrendingUp, Clock, Eye, Edit2, FileText, Trash2, MessageCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase'
 import { gerarPDFPedido } from '@/lib/pdf-generator'
 import ModalEditarPedido from '@/components/admin/ModalEditarPedido'
 import ModalNotificacao from '@/components/ModalNotificacao'
+import ModalWhatsApp from '@/components/admin/ModalWhatsApp'
 
 type Estatisticas = {
   totalPedidos: number
@@ -55,6 +56,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [pedidoSelecionado, setPedidoSelecionado] = useState<Pedido | null>(null)
   const [modalEditarAberto, setModalEditarAberto] = useState(false)
+  const [modalWhatsAppAberto, setModalWhatsAppAberto] = useState(false)
+  const [pedidoWhatsApp, setPedidoWhatsApp] = useState<Pedido | null>(null)
   const [novosPedidosIds, setNovosPedidosIds] = useState<Set<string>>(new Set())
   const [modalNotificacao, setModalNotificacao] = useState<{
     aberto: boolean
@@ -74,13 +77,19 @@ export default function Dashboard() {
   useEffect(() => {
     carregarDados()
 
-    // Configurar realtime subscription
+    // Polling a cada 5 segundos para garantir atualização em tempo real
+    const pollingInterval = setInterval(() => {
+      console.log('[Dashboard] Polling - verificando novos pedidos...')
+      carregarDados()
+    }, 5000)
+
+    // Configurar realtime subscription como backup
     const channel = supabase
       .channel('dashboard-pedidos')
       .on('postgres_changes', 
         { event: 'INSERT', schema: 'public', table: 'pedidos' },
         async (payload) => {
-          console.log('Novo pedido no dashboard:', payload.new)
+          console.log('[Dashboard] Realtime - Novo pedido detectado:', payload.new)
           // Adicionar novo pedido à lista
           const novoPedido = payload.new as any
           const { data: itens } = await supabase
@@ -88,7 +97,13 @@ export default function Dashboard() {
             .select('id, nome_produto, quantidade, preco_unitario, subtotal')
             .eq('pedido_id', novoPedido.id)
           
-          setPedidos(prev => [{ ...novoPedido, itens: itens || [] }, ...prev.slice(0, 9)])
+          setPedidos(prev => {
+            // Evita duplicatas
+            if (prev.some(p => p.id === novoPedido.id)) {
+              return prev
+            }
+            return [{ ...novoPedido, itens: itens || [] }, ...prev.slice(0, 11)]
+          })
           
           // Marcar como novo
           setNovosPedidosIds(prev => new Set(prev).add(novoPedido.id))
@@ -115,7 +130,7 @@ export default function Dashboard() {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'pedidos' },
         (payload) => {
-          console.log('Pedido atualizado no dashboard:', payload.new)
+          console.log('[Dashboard] Realtime - Pedido atualizado:', payload.new)
           // Atualizar pedido na lista
           setPedidos(prev => prev.map(p => 
             p.id === payload.new.id ? { ...p, ...payload.new } : p
@@ -125,15 +140,19 @@ export default function Dashboard() {
       .on('postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'pedidos' },
         (payload) => {
-          console.log('Pedido removido do dashboard:', payload.old)
+          console.log('[Dashboard] Realtime - Pedido removido:', payload.old)
           // Remover pedido da lista
           setPedidos(prev => prev.filter(p => p.id !== payload.old.id))
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[Dashboard] Realtime subscription status:', status)
+      })
 
     // Cleanup
     return () => {
+      console.log('[Dashboard] Limpando polling e subscription')
+      clearInterval(pollingInterval)
       supabase.removeChannel(channel)
     }
   }, [])
@@ -495,7 +514,7 @@ export default function Dashboard() {
                             R$ {pedido.total.toFixed(2)}
                           </span>
                         </div>
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-5 gap-1.5">
                           <button
                             onClick={() => router.push(`/admin/pedidos/${pedido.id}`)}
                             className="flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium 
@@ -518,10 +537,22 @@ export default function Dashboard() {
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
+                            onClick={() => {
+                              setPedidoWhatsApp(pedido)
+                              setModalWhatsAppAberto(true)
+                            }}
+                            className="flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium 
+                                     text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 
+                                     dark:hover:bg-green-700 rounded-lg transition-colors"
+                            title="Enviar WhatsApp"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </button>
+                          <button
                             onClick={() => handleGerarPDF(pedido.id)}
                             className="flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium 
-                                     text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 
-                                     dark:hover:bg-green-950/50 dark:text-green-400 rounded-lg transition-colors"
+                                     text-purple-600 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/30 
+                                     dark:hover:bg-purple-950/50 dark:text-purple-400 rounded-lg transition-colors"
                             title="Gerar PDF"
                           >
                             <FileText className="w-3.5 h-3.5" />
@@ -555,6 +586,15 @@ export default function Dashboard() {
           }}
           onSucesso={() => {
             carregarDados()
+          }}
+        />
+
+        <ModalWhatsApp
+          pedido={pedidoWhatsApp}
+          aberto={modalWhatsAppAberto}
+          onFechar={() => {
+            setModalWhatsAppAberto(false)
+            setPedidoWhatsApp(null)
           }}
         />
 
