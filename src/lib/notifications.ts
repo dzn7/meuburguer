@@ -151,8 +151,22 @@ async function playNotificationSound(): Promise<void> {
 // Verifica se o usuário tem notificações habilitadas
 async function checkNotificationPreferences(supabase: any): Promise<boolean> {
   try {
+    // Se não houver permissão do navegador, retorna false
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission !== 'granted') {
+        console.log('[Notificações] Permissão do navegador não concedida')
+        return false
+      }
+    } else {
+      return false
+    }
+
     const userId = localStorage.getItem('admin_user_id')
-    if (!userId) return false
+    if (!userId) {
+      // Se não tem userId mas tem permissão do navegador, permite notificações
+      console.log('[Notificações] Sem userId, mas permissão concedida - permitindo notificações')
+      return true
+    }
 
     const { data, error } = await supabase
       .from('notification_preferences')
@@ -160,12 +174,17 @@ async function checkNotificationPreferences(supabase: any): Promise<boolean> {
       .eq('user_id', userId)
       .single()
 
-    if (error || !data) return false
+    // Se não encontrou preferências, mas tem permissão do navegador, permite
+    if (error || !data) {
+      console.log('[Notificações] Sem preferências salvas, mas permissão concedida - permitindo notificações')
+      return true
+    }
 
     return data.notifications_enabled === true
   } catch (error) {
     console.error('[Notificações] Erro ao verificar preferências:', error)
-    return false
+    // Em caso de erro, se tem permissão do navegador, permite
+    return typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted'
   }
 }
 

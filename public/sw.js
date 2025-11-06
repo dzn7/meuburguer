@@ -1,5 +1,5 @@
 // Service Worker EXCLUSIVO para Cliente (Cardápio)
-const CACHE_VERSION = 'client-v1.0.4'
+const CACHE_VERSION = 'client-v1.0.5'
 const CACHE_NAME = `meu-burguer-client-${CACHE_VERSION}`
 
 // Cache mínimo - apenas essenciais

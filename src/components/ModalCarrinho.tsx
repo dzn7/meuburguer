@@ -149,7 +149,7 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
       }
 
       const mensagemWhatsApp = gerarMensagemWhatsApp(pedido.id)
-      const numeroWhatsApp = '5586999999999'
+      const numeroWhatsApp = '5586988414326'
       window.open(
         `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagemWhatsApp)}`,
         '_blank'
