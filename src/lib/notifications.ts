@@ -121,15 +121,51 @@ export async function notificarPedidoAtualizado(
   }
 }
 
-function playNotificationSound(): void {
+async function playNotificationSound(): Promise<void> {
   try {
-    const audio = new Audio('/notification.mp3')
+    // Verifica se o som está habilitado nas preferências
+    const userId = localStorage.getItem('admin_user_id')
+    if (!userId) return
+
+    const { data } = await (await import('@/lib/supabase')).supabase
+      .from('notification_preferences')
+      .select('sound_enabled')
+      .eq('user_id', userId)
+      .single()
+
+    if (!data || !data.sound_enabled) {
+      console.log('[Notificações] Som desabilitado nas preferências')
+      return
+    }
+
+    const audio = new Audio('/notificacao.mp3')
     audio.volume = 0.5
     audio.play().catch(err => {
       console.warn('Não foi possível tocar o som:', err)
     })
   } catch (error) {
     console.warn('Erro ao tocar som:', error)
+  }
+}
+
+// Verifica se o usuário tem notificações habilitadas
+async function checkNotificationPreferences(supabase: any): Promise<boolean> {
+  try {
+    const userId = localStorage.getItem('admin_user_id')
+    if (!userId) return false
+
+    const { data, error } = await supabase
+      .from('notification_preferences')
+      .select('notifications_enabled, new_order_notifications, status_change_notifications')
+      .eq('user_id', userId)
+      .single()
+
+    if (error || !data) return false
+
+    return data.notifications_enabled === true
+  } catch (error) {
+    console.error('[Notificações] Erro ao verificar preferências:', error)
+    return false
   }
 }
 
@@ -141,17 +177,27 @@ export function setupRealtimeNotifications(supabase: any): () => void {
     .channel('pedidos-notifications')
     .on('postgres_changes', 
       { event: 'INSERT', schema: 'public', table: 'pedidos' },
-      (payload: any) => {
+      async (payload: any) => {
         console.log('[Notificações] Novo pedido detectado:', payload.new.id)
-        notificarNovoPedido(payload.new.id, payload.new.nome_cliente)
+        
+        // Verifica se usuário tem notificações habilitadas
+        const hasPermission = await checkNotificationPreferences(supabase)
+        if (hasPermission) {
+          notificarNovoPedido(payload.new.id, payload.new.nome_cliente)
+        }
       }
     )
     .on('postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'pedidos' },
-      (payload: any) => {
+      async (payload: any) => {
         if (payload.old.status !== payload.new.status) {
           console.log('[Notificações] Status alterado:', payload.old.status, '->', payload.new.status)
-          notificarPedidoAtualizado(payload.new.id, payload.new.status)
+          
+          // Verifica se usuário tem notificações habilitadas
+          const hasPermission = await checkNotificationPreferences(supabase)
+          if (hasPermission) {
+            notificarPedidoAtualizado(payload.new.id, payload.new.status)
+          }
         }
       }
     )

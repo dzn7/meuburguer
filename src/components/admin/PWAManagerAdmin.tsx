@@ -6,6 +6,8 @@ import { RefreshCw } from 'lucide-react'
 export default function PWAManagerAdmin() {
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null)
   const [updateAvailable, setUpdateAvailable] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isClearingCache, setIsClearingCache] = useState(false)
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -55,51 +57,46 @@ export default function PWAManagerAdmin() {
         }
       })
 
+      // Listener para quando o novo SW assumir controle
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('[PWA Admin] Novo Service Worker ativado')
+        // Recarrega apenas uma vez quando o controle mudar
+        if (!isUpdating) {
+          window.location.reload()
+        }
+      })
+
     } catch (error) {
       console.error('[PWA Admin] Erro ao registrar Service Worker:', error)
     }
   }
 
   const handleUpdate = async () => {
+    if (!registration?.waiting) {
+      console.warn('[PWA Admin] Nenhuma atualização disponível')
+      setUpdateAvailable(false)
+      return
+    }
+
     try {
-      if (registration?.waiting) {
-        console.log('[PWA Admin] Ativando nova versão...')
-        
-        // Envia mensagem para o SW waiting
-        registration.waiting.postMessage({ type: 'SKIP_WAITING' })
-        
-        // Aguarda o novo SW assumir controle e recarrega
-        let reloaded = false
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!reloaded) {
-            reloaded = true
-            console.log('[PWA Admin] Nova versão ativada, recarregando...')
-            window.location.reload()
-          }
-        })
-        
-        // Timeout de segurança - recarrega após 2s se não houver controllerchange
-        setTimeout(() => {
-          if (!reloaded) {
-            reloaded = true
-            console.log('[PWA Admin] Timeout - forçando reload')
-            window.location.reload()
-          }
-        }, 2000)
-      } else {
-        // Se não há waiting, apenas recarrega
-        console.log('[PWA Admin] Sem SW waiting, recarregando...')
-        window.location.reload()
-      }
+      setIsUpdating(true)
+      console.log('[PWA Admin] Ativando nova versão...')
+      
+      // Envia mensagem para o SW waiting
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+      
+      // O reload será feito pelo listener 'controllerchange'
     } catch (error) {
       console.error('[PWA Admin] Erro ao atualizar:', error)
-      // Força reload mesmo com erro
+      setIsUpdating(false)
+      // Em caso de erro, força reload
       window.location.reload()
     }
   }
 
   const clearCache = async () => {
     try {
+      setIsClearingCache(true)
       console.log('[PWA Admin] Limpando cache...')
       
       // Limpa todos os caches
@@ -125,6 +122,7 @@ export default function PWAManagerAdmin() {
       }, 500)
     } catch (error) {
       console.error('[PWA Admin] Erro ao limpar cache:', error)
+      setIsClearingCache(false)
       window.location.reload()
     }
   }
@@ -138,27 +136,51 @@ export default function PWAManagerAdmin() {
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
             <h4 className="font-bold mb-1 flex items-center gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Nova versão disponível!
+              <RefreshCw className={`w-4 h-4 ${isUpdating || isClearingCache ? 'animate-spin' : ''}`} />
+              {isUpdating ? 'Atualizando...' : isClearingCache ? 'Limpando cache...' : 'Nova versão disponível!'}
             </h4>
             <p className="text-sm text-dourado-100">
-              Atualize para ter acesso às últimas melhorias.
+              {isUpdating 
+                ? 'Aguarde, estamos aplicando as melhorias...' 
+                : isClearingCache
+                ? 'Removendo arquivos em cache...'
+                : 'Atualize para ter acesso às últimas melhorias.'}
             </p>
           </div>
           <div className="flex flex-col gap-2">
             <button
               onClick={handleUpdate}
-              className="px-4 py-2 bg-white text-dourado-600 rounded-lg font-medium 
-                       hover:bg-dourado-50 transition-colors whitespace-nowrap text-sm"
+              disabled={isUpdating || isClearingCache}
+              className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap text-sm
+                       ${isUpdating || isClearingCache
+                         ? 'bg-dourado-300 text-dourado-700 cursor-not-allowed opacity-75' 
+                         : 'bg-white text-dourado-600 hover:bg-dourado-50 hover:shadow-lg'}`}
             >
-              Atualizar
+              {isUpdating ? (
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Atualizando
+                </span>
+              ) : (
+                'Atualizar'
+              )}
             </button>
             <button
               onClick={clearCache}
-              className="px-4 py-1.5 bg-dourado-700 text-white rounded-lg font-medium 
-                       hover:bg-dourado-800 transition-colors whitespace-nowrap text-xs"
+              disabled={isUpdating || isClearingCache}
+              className={`px-4 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap text-xs
+                       ${isUpdating || isClearingCache
+                         ? 'bg-dourado-800 text-dourado-300 cursor-not-allowed opacity-75' 
+                         : 'bg-dourado-700 text-white hover:bg-dourado-800 hover:shadow-lg'}`}
             >
-              Limpar Cache
+              {isClearingCache ? (
+                <span className="flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Limpando
+                </span>
+              ) : (
+                'Limpar Cache'
+              )}
             </button>
           </div>
         </div>

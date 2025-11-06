@@ -1,5 +1,5 @@
 // Service Worker EXCLUSIVO para Cliente (Cardápio)
-const CACHE_VERSION = 'client-v1.0.1'
+const CACHE_VERSION = 'client-v1.0.2'
 const CACHE_NAME = `meu-burguer-client-${CACHE_VERSION}`
 
 // Cache mínimo - apenas essenciais
@@ -165,7 +165,7 @@ async function cacheFirst(request) {
   }
 }
 
-// Listener para mensagens
+// Listener para mensagens (atualização forçada e limpeza de cache)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     console.log('[SW Cliente] Forçando atualização')
@@ -182,28 +182,6 @@ self.addEventListener('message', (event) => {
               return caches.delete(cacheName)
             }
           })
-        )
-      })
-    )
-  }
-})
-
-// Estratégia: Network Only (sempre busca da rede)
-async function networkOnly(request) {
-  return fetch(request)
-}
-
-// Listener para mensagens (atualização forçada)
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting()
-  }
-  
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
-    event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => caches.delete(cacheName))
         )
       })
     )
