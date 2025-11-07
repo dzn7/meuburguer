@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { useAdminAuth } from '@/contexts/AdminAuthContext'
@@ -11,10 +11,24 @@ import { Lock, User, AlertCircle } from 'lucide-react'
 export default function AdminLogin() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { login } = useAdminAuth()
   const router = useRouter()
+
+  // Carregar credenciais salvas ao montar
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('admin_saved_username')
+    const savedPassword = localStorage.getItem('admin_saved_password')
+    const savedRemember = localStorage.getItem('admin_remember_me')
+    
+    if (savedRemember === 'true' && savedUsername && savedPassword) {
+      setUsername(savedUsername)
+      setPassword(savedPassword)
+      setRememberMe(true)
+    }
+  }, [])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -24,6 +38,18 @@ export default function AdminLogin() {
     setTimeout(() => {
       const success = login(username, password)
       if (success) {
+        // Salvar credenciais se "Lembrar de mim" estiver marcado
+        if (rememberMe) {
+          localStorage.setItem('admin_saved_username', username)
+          localStorage.setItem('admin_saved_password', password)
+          localStorage.setItem('admin_remember_me', 'true')
+        } else {
+          // Limpar credenciais salvas se desmarcado
+          localStorage.removeItem('admin_saved_username')
+          localStorage.removeItem('admin_saved_password')
+          localStorage.removeItem('admin_remember_me')
+        }
+        
         router.push('/admin/dashboard')
       } else {
         setError('Credenciais inválidas. Tente novamente.')
@@ -92,6 +118,24 @@ export default function AdminLogin() {
                 required
                 autoComplete="current-password"
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 dark:border-gray-700 
+                         text-dourado-600 focus:ring-dourado-500 focus:ring-2 
+                         bg-white dark:bg-gray-800 cursor-pointer"
+              />
+              <label
+                htmlFor="remember-me"
+                className="text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none"
+              >
+                Lembrar de mim
+              </label>
             </div>
 
             <button

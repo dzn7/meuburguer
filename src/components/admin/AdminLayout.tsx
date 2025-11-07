@@ -20,6 +20,7 @@ import { useAdminAuth } from '@/contexts/AdminAuthContext'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
 import NotificationButton from './NotificationButton'
+import { NotificationPermission } from './NotificationPermission'
 
 type AdminLayoutProps = {
   children: ReactNode
@@ -221,6 +222,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Notification Button */}
       <NotificationButton />
+      
+      {/* Notification Permission Banner */}
+      <NotificationPermission />
     </div>
   )
 }

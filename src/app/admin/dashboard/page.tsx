@@ -13,6 +13,7 @@ import { gerarPDFPedido } from '@/lib/pdf-generator'
 import ModalEditarPedido from '@/components/admin/ModalEditarPedido'
 import ModalNotificacao from '@/components/ModalNotificacao'
 import ModalWhatsApp from '@/components/admin/ModalWhatsApp'
+import ModalDetalhesPedido from '@/components/admin/ModalDetalhesPedido'
 
 type Estatisticas = {
   totalPedidos: number
@@ -58,6 +59,8 @@ export default function Dashboard() {
   const [modalEditarAberto, setModalEditarAberto] = useState(false)
   const [modalWhatsAppAberto, setModalWhatsAppAberto] = useState(false)
   const [pedidoWhatsApp, setPedidoWhatsApp] = useState<Pedido | null>(null)
+  const [modalDetalhesAberto, setModalDetalhesAberto] = useState(false)
+  const [pedidoDetalhesId, setPedidoDetalhesId] = useState<string | null>(null)
   const [novosPedidosIds, setNovosPedidosIds] = useState<Set<string>>(new Set())
   const [modalNotificacao, setModalNotificacao] = useState<{
     aberto: boolean
@@ -516,7 +519,10 @@ export default function Dashboard() {
                         </div>
                         <div className="grid grid-cols-5 gap-1.5">
                           <button
-                            onClick={() => router.push(`/admin/pedidos/${pedido.id}`)}
+                            onClick={() => {
+                              setPedidoDetalhesId(pedido.id)
+                              setModalDetalhesAberto(true)
+                            }}
                             className="flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium 
                                      text-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:bg-blue-950/30 
                                      dark:hover:bg-blue-950/50 dark:text-blue-400 rounded-lg transition-colors"
@@ -586,6 +592,22 @@ export default function Dashboard() {
           }}
           onSucesso={() => {
             carregarDados()
+          }}
+        />
+
+        <ModalDetalhesPedido
+          pedidoId={pedidoDetalhesId}
+          aberto={modalDetalhesAberto}
+          onFechar={() => {
+            setModalDetalhesAberto(false)
+            setPedidoDetalhesId(null)
+          }}
+          onEditar={(pedido) => {
+            setPedidoSelecionado(pedido)
+            setModalEditarAberto(true)
+          }}
+          onGerarPDF={(pedido) => {
+            handleGerarPDF(pedido.id)
           }}
         />
 

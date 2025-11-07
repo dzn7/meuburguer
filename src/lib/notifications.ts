@@ -1,91 +1,49 @@
 // Sistema de notificações PWA para Admin
+// Integrado com push-notifications.ts
 
-export async function requestNotificationPermission(): Promise<NotificationPermission> {
-  // Verifica se está no navegador
-  if (typeof window === 'undefined') {
-    return 'denied'
-  }
+import { supabase } from './supabase'
+import {
+  isNotificationSupported,
+  requestNotificationPermission,
+  getNotificationPermission,
+  showServiceWorkerNotification,
+  notifyNewPedido as pushNotifyNewPedido,
+  notifyStatusUpdate as pushNotifyStatusUpdate,
+} from './push-notifications'
 
-  if (!('Notification' in window)) {
-    console.warn('[Notificações] Este navegador não suporta notificações')
-    return 'denied'
-  }
-
-  if (Notification.permission === 'granted') {
-    console.log('[Notificações] Permissão já concedida')
-    return 'granted'
-  }
-
-  if (Notification.permission === 'denied') {
-    console.warn('[Notificações] Permissão negada pelo usuário')
-    return 'denied'
-  }
-
-  try {
-    const permission = await Notification.requestPermission()
-    console.log('[Notificações] Permissão solicitada:', permission)
-    return permission
-  } catch (error) {
-    console.error('[Notificações] Erro ao solicitar permissão:', error)
-    return 'denied'
-  }
-}
+// Re-exportar funções do push-notifications para compatibilidade
+export { isNotificationSupported, requestNotificationPermission, getNotificationPermission }
 
 export async function showNotification(
   title: string,
   options?: NotificationOptions
 ): Promise<void> {
-  try {
-    const permission = await requestNotificationPermission()
+  await showServiceWorkerNotification({
+    title,
+    body: options?.body || '',
+    icon: options?.icon,
+    badge: options?.badge,
+    tag: options?.tag,
+    requireInteraction: options?.requireInteraction,
+    data: options?.data,
+  })
+}
 
-    if (permission !== 'granted') {
-      console.warn('[Notificações] Permissão não concedida')
+export async function notificarNovoPedido(pedidoId: string, nomeCliente: string, total?: number): Promise<void> {
+  try {
+    // Verificar preferências antes de enviar
+    const canNotify = await checkNotificationPreferences(supabase)
+    if (!canNotify) {
+      console.log('[Notificações] Notificações desabilitadas ou sem permissão')
       return
     }
 
-    if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.ready
-      
-      const notificationOptions = {
-        icon: '/assets/favicon/android-chrome-192x192.png',
-        badge: '/assets/favicon/android-chrome-192x192.png',
-        vibrate: [200, 100, 200],
-        requireInteraction: true,
-        ...options
-      } as any
-      
-      await registration.showNotification(title, notificationOptions)
-      console.log('[Notificações] Notificação exibida:', title)
-    } else {
-      // Fallback para notificação nativa
-      new Notification(title, options)
-      console.log('[Notificações] Notificação nativa exibida:', title)
-    }
-  } catch (error) {
-    console.error('[Notificações] Erro ao exibir notificação:', error)
-  }
-}
-
-export async function notificarNovoPedido(pedidoId: string, nomeCliente: string): Promise<void> {
-  try {
-    await showNotification('🍔 Novo Pedido Recebido!', {
-      body: `Cliente: ${nomeCliente}\nClique para ver detalhes`,
-      tag: `pedido-${pedidoId}`,
-      data: {
-        url: `/admin/pedidos/${pedidoId}`
-      },
-      actions: [
-        {
-          action: 'view',
-          title: 'Ver Pedido',
-          icon: '/assets/favicon/android-chrome-192x192.png'
-        },
-        {
-          action: 'close',
-          title: 'Fechar'
-        }
-      ]
-    } as any)
+    // Usar função do push-notifications
+    await pushNotifyNewPedido({
+      id: pedidoId,
+      nome_cliente: nomeCliente,
+      total: total || 0,
+    })
 
     // Tocar som de notificação
     playNotificationSound()
@@ -96,26 +54,23 @@ export async function notificarNovoPedido(pedidoId: string, nomeCliente: string)
 
 export async function notificarPedidoAtualizado(
   pedidoId: string,
-  status: string
+  status: string,
+  nomeCliente?: string
 ): Promise<void> {
   try {
-    const statusMessages: { [key: string]: string } = {
-      confirmado: '✅ Pedido Confirmado',
-      preparando: '👨‍🍳 Pedido em Preparo',
-      pronto: '🎉 Pedido Pronto',
-      entregue: '🚚 Pedido Entregue',
-      cancelado: '❌ Pedido Cancelado'
+    // Verificar preferências antes de enviar
+    const canNotify = await checkNotificationPreferences(supabase)
+    if (!canNotify) {
+      console.log('[Notificações] Notificações desabilitadas ou sem permissão')
+      return
     }
 
-    const title = statusMessages[status] || 'Pedido Atualizado'
-
-    await showNotification(title, {
-      body: `Status do pedido foi alterado`,
-      tag: `pedido-update-${pedidoId}`,
-      data: {
-        url: `/admin/pedidos/${pedidoId}`
-      }
-    } as any)
+    // Usar função do push-notifications
+    await pushNotifyStatusUpdate({
+      id: pedidoId,
+      nome_cliente: nomeCliente || 'Cliente',
+      status,
+    })
   } catch (error) {
     console.error('[Notificações] Erro ao notificar atualização de pedido:', error)
   }
@@ -202,7 +157,7 @@ export function setupRealtimeNotifications(supabase: any): () => void {
         // Verifica se usuário tem notificações habilitadas
         const hasPermission = await checkNotificationPreferences(supabase)
         if (hasPermission) {
-          notificarNovoPedido(payload.new.id, payload.new.nome_cliente)
+          notificarNovoPedido(payload.new.id, payload.new.nome_cliente, payload.new.total)
         }
       }
     )
@@ -215,7 +170,7 @@ export function setupRealtimeNotifications(supabase: any): () => void {
           // Verifica se usuário tem notificações habilitadas
           const hasPermission = await checkNotificationPreferences(supabase)
           if (hasPermission) {
-            notificarPedidoAtualizado(payload.new.id, payload.new.status)
+            notificarPedidoAtualizado(payload.new.id, payload.new.status, payload.new.nome_cliente)
           }
         }
       }
