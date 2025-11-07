@@ -97,9 +97,9 @@ export default function NotificationButton() {
   const handleEnableNotifications = async () => {
     setLoading(true)
     try {
-      const permission = await requestNotificationPermission()
+      const permissionGranted = await requestNotificationPermission()
       
-      if (permission === 'granted') {
+      if (permissionGranted) {
         const newPreferences = {
           ...preferences,
           notifications_enabled: true,

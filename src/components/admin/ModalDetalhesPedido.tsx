@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, FileText, Edit2, Package, User, Phone, MapPin, Clock, DollarSign } from 'lucide-react'
 import { format } from 'date-fns'
@@ -51,13 +51,7 @@ export default function ModalDetalhesPedido({
   const [itens, setItens] = useState<ItemPedido[]>([])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (aberto && pedidoId) {
-      carregarPedido()
-    }
-  }, [aberto, pedidoId])
-
-  const carregarPedido = async () => {
+  const carregarPedido = useCallback(async () => {
     if (!pedidoId) return
     
     setLoading(true)
@@ -85,7 +79,13 @@ export default function ModalDetalhesPedido({
     } finally {
       setLoading(false)
     }
-  }
+  }, [pedidoId])
+
+  useEffect(() => {
+    if (aberto && pedidoId) {
+      void carregarPedido()
+    }
+  }, [aberto, pedidoId, carregarPedido])
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
