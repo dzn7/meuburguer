@@ -1,28 +1,83 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bell, BellOff, X, Check } from 'lucide-react'
+import { Bell, BellOff, X, Check, Volume2, VolumeX } from 'lucide-react'
 import {
   isNotificationSupported,
   getNotificationPermission,
   requestNotificationPermission,
   testNotification,
 } from '@/lib/push-notifications'
+import { supabase } from '@/lib/supabase'
+
+type NotificationPreferences = {
+  notifications_enabled: boolean
+  push_enabled: boolean
+  sound_enabled: boolean
+  new_order_notifications: boolean
+  status_change_notifications: boolean
+}
+
+const DEFAULT_PREFERENCES: NotificationPreferences = {
+  notifications_enabled: false,
+  push_enabled: false,
+  sound_enabled: true,
+  new_order_notifications: true,
+  status_change_notifications: true,
+}
 
 /**
- * Componente para solicitar permissão de notificações
- * Aparece apenas no dashboard admin
- * Baseado no sistema funcional de barbeariaborges
+ * Componente único de permissões e preferências de notificações
+ * Responsável por solicitar, salvar preferências e emitir teste
  */
 export function NotificationPermission() {
   const [permission, setPermission] = useState<NotificationPermission>('default')
-  const [showBanner, setShowBanner] = useState(false)
   const [isSupported, setIsSupported] = useState(false)
+  const [showBanner, setShowBanner] = useState(false)
   const [showIndicator, setShowIndicator] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFERENCES)
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [savingPreferences, setSavingPreferences] = useState(false)
+
+  const notificationsActive = permission === 'granted' && preferences.notifications_enabled
+  const isPermissionDenied = permission === 'denied'
+  const isActionPending = loading || savingPreferences
+
+  const openPanel = () => setIsPanelOpen(true)
+  const closePanel = () => {
+    if (isActionPending) return
+    setIsPanelOpen(false)
+  }
+
+  const toggleSound = async () => {
+    await savePreferences({
+      ...preferences,
+      sound_enabled: !preferences.sound_enabled,
+    })
+  }
+
+  const handleDisableNotifications = async () => {
+    await savePreferences({
+      ...preferences,
+      notifications_enabled: false,
+      push_enabled: false,
+    })
+    setShowIndicator(true)
+    setShowSuccessMessage(false)
+    setIsPanelOpen(false)
+  }
+
+  const handleFloatingButtonClick = () => {
+    if (isActionPending) return
+    setShowBanner(false)
+    openPanel()
+  }
 
   useEffect(() => {
-    // Verificar suporte
     const supported = isNotificationSupported()
     setIsSupported(supported)
 
@@ -31,42 +86,172 @@ export function NotificationPermission() {
       return
     }
 
-    // Verificar permissão atual
     const currentPermission = getNotificationPermission()
     setPermission(currentPermission)
 
-    // Esconder indicador se já concedeu permissão
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const storedUserId = localStorage.getItem('admin_user_id')
+    if (storedUserId) {
+      setUserId(storedUserId)
+    } else {
+      const newUserId = `admin_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
+      localStorage.setItem('admin_user_id', newUserId)
+      setUserId(newUserId)
+    }
+
     if (currentPermission === 'granted') {
       setShowIndicator(false)
     }
 
-    // Mostrar banner se ainda não pediu permissão
     const hasAsked = localStorage.getItem('notification-permission-asked')
     if (currentPermission === 'default' && !hasAsked) {
-      // Aguardar 3 segundos antes de mostrar
-      setTimeout(() => {
+      timer = setTimeout(() => {
         setShowBanner(true)
       }, 3000)
     }
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer)
+      }
+    }
   }, [])
 
-  const handleRequestPermission = async () => {
-    const granted = await requestNotificationPermission()
-    
-    if (granted) {
-      setPermission('granted')
-      setShowBanner(false)
-      setShowIndicator(false) // Esconder indicador após permitir
-      
-      // Enviar notificação de teste - IMPORTANTE: mostra aviso ao ativar
-      await testNotification()
-    } else {
-      setPermission('denied')
-      setShowBanner(false)
-    }
+  const loadPreferences = useCallback(async (uid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('notification_preferences')
+        .select(
+          'notifications_enabled, push_enabled, sound_enabled, new_order_notifications, status_change_notifications'
+        )
+        .eq('user_id', uid)
+        .single()
 
-    // Marcar que já pediu permissão
-    localStorage.setItem('notification-permission-asked', 'true')
+      const currentPermission = getNotificationPermission()
+      setPermission(currentPermission)
+
+      if (error && (error as any).code !== 'PGRST116') {
+        console.error('[Notificações] Erro ao carregar preferências:', error)
+        setPreferences(DEFAULT_PREFERENCES)
+        setShowIndicator(currentPermission !== 'granted')
+        return
+      }
+
+      if (data) {
+        const mergedPreferences: NotificationPreferences = {
+          ...DEFAULT_PREFERENCES,
+          ...data,
+        }
+        setPreferences(mergedPreferences)
+
+        const notificationsAtivas =
+          mergedPreferences.notifications_enabled && currentPermission === 'granted'
+        setShowIndicator(!notificationsAtivas)
+      } else {
+        setPreferences(DEFAULT_PREFERENCES)
+        const notificationsAtivas = currentPermission === 'granted'
+        setShowIndicator(!notificationsAtivas)
+      }
+    } catch (error) {
+      console.error('[Notificações] Erro inesperado ao carregar preferências:', error)
+    }
+  }, [])
+
+  const savePreferences = useCallback(
+    async (newPreferences: NotificationPreferences) => {
+      if (!userId) return
+
+      try {
+        setSavingPreferences(true)
+        const { error } = await supabase
+          .from('notification_preferences')
+          .upsert({
+            user_id: userId,
+            ...newPreferences,
+          })
+
+        if (error) throw error
+
+        setPreferences(newPreferences)
+      } catch (error) {
+        console.error('[Notificações] Erro ao salvar preferências:', error)
+      } finally {
+        setSavingPreferences(false)
+      }
+    },
+    [userId]
+  )
+
+  useEffect(() => {
+    if (!userId || !isSupported) return
+    void loadPreferences(userId)
+  }, [userId, isSupported, loadPreferences])
+
+  useEffect(() => {
+    if (!showSuccessMessage) return
+
+    const timeout = setTimeout(() => {
+      setShowSuccessMessage(false)
+    }, 3000)
+
+    return () => clearTimeout(timeout)
+  }, [showSuccessMessage])
+
+  useEffect(() => {
+    if (!isSupported) return
+
+    if (permission === 'granted') {
+      setShowIndicator(!preferences.notifications_enabled)
+    } else if (permission === 'default') {
+      setShowIndicator(true)
+    }
+  }, [permission, preferences.notifications_enabled, isSupported])
+
+  const handleRequestPermission = async () => {
+    setLoading(true)
+    try {
+      const granted = await requestNotificationPermission()
+      localStorage.setItem('notification-permission-asked', 'true')
+
+      if (granted) {
+        setPermission('granted')
+
+        const updatedPreferences: NotificationPreferences = {
+          ...preferences,
+          notifications_enabled: true,
+          push_enabled: true,
+        }
+
+        await savePreferences(updatedPreferences)
+
+        setShowBanner(false)
+        setShowIndicator(false)
+        setShowSuccessMessage(true)
+        openPanel()
+
+        await testNotification()
+        setTimeout(() => {
+          setIsPanelOpen(false)
+        }, 3200)
+      } else {
+        setPermission('denied')
+        setShowBanner(false)
+        setShowIndicator(false)
+
+        if (preferences.notifications_enabled) {
+          await savePreferences({
+            ...preferences,
+            notifications_enabled: false,
+            push_enabled: false,
+          })
+        }
+      }
+    } catch (error) {
+      console.error('[Notificações] Erro ao solicitar permissão:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDismiss = () => {
@@ -74,21 +259,46 @@ export function NotificationPermission() {
     localStorage.setItem('notification-permission-asked', 'true')
   }
 
-  // Não mostrar se não for suportado
-  if (!isSupported) {
-    return null
-  }
+  const shouldShowFloatingButton = !isPanelOpen
 
-  // Não mostrar se já negou
-  if (permission === 'denied') {
-    return null
-  }
+  const floatingButtonClass = notificationsActive
+    ? 'fixed bottom-6 right-6 z-[9998] px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full shadow-2xl hover:shadow-amber-500/40 transition-all duration-300 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+    : isPermissionDenied
+    ? 'fixed bottom-6 right-6 z-[9998] px-4 py-3 bg-red-600 text-white rounded-full shadow-2xl hover:bg-red-700 transition-all duration-300 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
+    : 'fixed bottom-6 right-6 z-[9998] px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full shadow-2xl hover:shadow-amber-500/50 transition-all duration-300 flex items-center gap-2 animate-pulse disabled:opacity-60 disabled:cursor-not-allowed'
+
+  const floatingButtonLabel = notificationsActive
+    ? 'Notificações'
+    : isPermissionDenied
+    ? 'Permissão negada'
+    : 'Ativar notificações'
 
   return (
     <>
-      {/* Banner de solicitação - RESPONSIVO */}
+      {shouldShowFloatingButton && (
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0, opacity: 0 }}
+          whileHover={{ scale: isActionPending ? 1 : 1.05 }}
+          whileTap={{ scale: isActionPending ? 1 : 0.97 }}
+          onClick={handleFloatingButtonClick}
+          disabled={isActionPending || !isSupported}
+          className={floatingButtonClass}
+        >
+          {notificationsActive ? (
+            <Bell className="w-5 h-5" />
+          ) : isPermissionDenied ? (
+            <BellOff className="w-5 h-5" />
+          ) : (
+            <Bell className="w-5 h-5" />
+          )}
+          <span className="hidden sm:inline text-sm font-medium">{floatingButtonLabel}</span>
+        </motion.button>
+      )}
+
       <AnimatePresence>
-        {showBanner && permission === 'default' && (
+        {showBanner && !isPanelOpen && permission !== 'denied' && (
           <motion.div
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -97,32 +307,30 @@ export function NotificationPermission() {
           >
             <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-6">
               <div className="flex items-start gap-3 sm:gap-4">
-                {/* Ícone */}
                 <div className="flex-shrink-0">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                     <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
 
-                {/* Conteúdo */}
                 <div className="flex-1 min-w-0">
                   <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white mb-1 sm:mb-2">
-                    Ativar Notificações?
+                    Ativar notificações?
                   </h3>
                   <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-3 sm:mb-4">
-                    Receba alertas de novos pedidos, mesmo com o navegador minimizado.
+                    Receba alertas de novos pedidos, mesmo com o dashboard minimizado.
                   </p>
 
-                  {/* Botões */}
                   <div className="flex gap-2">
                     <button
                       onClick={handleRequestPermission}
+                      disabled={loading}
                       className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 
-                               bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium 
-                               rounded-lg transition-colors"
+                               bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed
+                               text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       <Check className="w-4 h-4" />
-                      Ativar
+                      {loading ? 'Ativando...' : 'Ativar'}
                     </button>
                     <button
                       onClick={handleDismiss}
@@ -139,9 +347,8 @@ export function NotificationPermission() {
         )}
       </AnimatePresence>
 
-      {/* Indicador de status - Só mostra se não concedeu permissão */}
       <AnimatePresence>
-        {showIndicator && permission !== 'granted' && (
+        {showIndicator && permission !== 'denied' && (
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -155,6 +362,22 @@ export function NotificationPermission() {
             >
               <BellOff className="w-5 h-5" />
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSuccessMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-24 right-4 z-[9999]"
+          >
+            <div className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-xl shadow-lg">
+              <Check className="w-4 h-4" />
+              <span className="text-sm font-medium">Notificações ativadas com sucesso!</span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
