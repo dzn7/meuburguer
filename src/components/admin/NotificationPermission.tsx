@@ -78,16 +78,18 @@ export function NotificationPermission() {
   }
 
   useEffect(() => {
+    console.log('[NotificationPermission] Inicializando componente')
     const supported = isNotificationSupported()
     setIsSupported(supported)
 
     if (!supported) {
-      console.log('[Notificações] Não suportadas neste navegador')
+      console.log('[NotificationPermission] Notificações não suportadas neste navegador')
       return
     }
 
     const currentPermission = getNotificationPermission()
     setPermission(currentPermission)
+    console.log('[NotificationPermission] Permissão atual:', currentPermission)
 
     let timer: ReturnType<typeof setTimeout> | undefined
 
@@ -100,18 +102,26 @@ export function NotificationPermission() {
       setUserId(newUserId)
     }
 
+    const hasAsked = localStorage.getItem('notification-permission-asked')
+    console.log('[NotificationPermission] Já foi perguntado?', hasAsked)
+
     // Não mostrar indicador se já tiver permissão
     if (currentPermission === 'granted') {
+      console.log('[NotificationPermission] Permissão granted - escondendo indicador')
       setShowIndicator(false)
     } else if (currentPermission === 'default') {
       // Só mostrar indicador se não tiver sido perguntado ainda
-      const hasAsked = localStorage.getItem('notification-permission-asked')
-      setShowIndicator(!hasAsked)
+      const shouldShow = !hasAsked
+      console.log('[NotificationPermission] Permissão default - mostrar indicador?', shouldShow)
+      setShowIndicator(shouldShow)
+    } else {
+      console.log('[NotificationPermission] Permissão negada - escondendo indicador')
+      setShowIndicator(false)
     }
 
-    const hasAsked = localStorage.getItem('notification-permission-asked')
     if (currentPermission === 'default' && !hasAsked) {
       timer = setTimeout(() => {
+        console.log('[NotificationPermission] Mostrando banner após 3s')
         setShowBanner(true)
       }, 3000)
     }
@@ -125,6 +135,7 @@ export function NotificationPermission() {
 
   const loadPreferences = useCallback(async (uid: string) => {
     try {
+      console.log('[NotificationPermission] Carregando preferências para userId:', uid)
       const { data, error } = await supabase
         .from('notification_preferences')
         .select(
@@ -135,11 +146,18 @@ export function NotificationPermission() {
 
       const currentPermission = getNotificationPermission()
       setPermission(currentPermission)
+      console.log('[NotificationPermission] Preferências carregadas:', { data, currentPermission })
 
       if (error && (error as any).code !== 'PGRST116') {
         console.error('[Notificações] Erro ao carregar preferências:', error)
         setPreferences(DEFAULT_PREFERENCES)
-        setShowIndicator(currentPermission !== 'granted')
+        // Em caso de erro, só mostrar se for default e não foi perguntado
+        if (currentPermission === 'default') {
+          const hasAsked = localStorage.getItem('notification-permission-asked')
+          setShowIndicator(!hasAsked)
+        } else {
+          setShowIndicator(false)
+        }
         return
       }
 
@@ -150,13 +168,28 @@ export function NotificationPermission() {
         }
         setPreferences(mergedPreferences)
 
-        const notificationsAtivas =
-          mergedPreferences.notifications_enabled && currentPermission === 'granted'
-        setShowIndicator(!notificationsAtivas)
+        // Só mostrar indicador se:
+        // 1. Permissão granted mas notificações desabilitadas
+        // 2. Permissão default e nunca foi perguntado
+        if (currentPermission === 'granted') {
+          setShowIndicator(!mergedPreferences.notifications_enabled)
+        } else if (currentPermission === 'default') {
+          const hasAsked = localStorage.getItem('notification-permission-asked')
+          setShowIndicator(!hasAsked)
+        } else {
+          setShowIndicator(false)
+        }
       } else {
         setPreferences(DEFAULT_PREFERENCES)
-        const notificationsAtivas = currentPermission === 'granted'
-        setShowIndicator(!notificationsAtivas)
+        // Mesma lógica para quando não há dados
+        if (currentPermission === 'granted') {
+          setShowIndicator(false) // Se granted mas sem preferências, não mostrar
+        } else if (currentPermission === 'default') {
+          const hasAsked = localStorage.getItem('notification-permission-asked')
+          setShowIndicator(!hasAsked)
+        } else {
+          setShowIndicator(false)
+        }
       }
     } catch (error) {
       console.error('[Notificações] Erro inesperado ao carregar preferências:', error)
@@ -206,10 +239,18 @@ export function NotificationPermission() {
   useEffect(() => {
     if (!isSupported) return
 
+    console.log('[NotificationPermission] useEffect - permission/preferences mudou:', {
+      permission,
+      notifications_enabled: preferences.notifications_enabled,
+      showIndicator
+    })
+
+    // Só atualizar indicador se a permissão for granted
+    // Para 'default', deixar a lógica inicial do primeiro useEffect
     if (permission === 'granted') {
-      setShowIndicator(!preferences.notifications_enabled)
-    } else if (permission === 'default') {
-      setShowIndicator(true)
+      const shouldShow = !preferences.notifications_enabled
+      console.log('[NotificationPermission] Permissão granted - atualizar indicador para:', shouldShow)
+      setShowIndicator(shouldShow)
     }
   }, [permission, preferences.notifications_enabled, isSupported])
 
@@ -261,6 +302,7 @@ export function NotificationPermission() {
 
   const handleDismiss = () => {
     setShowBanner(false)
+    setShowIndicator(false) // Esconder indicador também
     localStorage.setItem('notification-permission-asked', 'true')
   }
 
