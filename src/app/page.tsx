@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ChevronDown, Star, ClipboardList, Search } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import HeroCarousel from '@/components/HeroCarousel'
 import CartaoProduto from '@/components/CartaoProduto'
 import CartaoBebida from '@/components/CartaoBebida'
 import ModalComplementos from '@/components/ModalComplementos'
@@ -119,34 +120,27 @@ export default function Home() {
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
 
-      <main className="pt-24 pb-24">
-        <section className="relative overflow-hidden bg-gradient-to-br from-creme-50 via-white to-dourado-50 dark:from-zinc-950 dark:via-black dark:to-zinc-950 py-16 md:py-24">
+      <main className="pt-24 pb-24 relative">
+        <section className="relative overflow-hidden bg-gradient-to-br from-creme-50 via-white to-dourado-50 dark:from-zinc-950 dark:via-black dark:to-zinc-950 py-12 md:py-16">
+          <div className="absolute inset-0 bg-burger-pattern opacity-[0.15] dark:opacity-[0.08]" />
+          
           <div className="absolute inset-0 opacity-10 dark:opacity-[0.07]">
             <div className="absolute top-20 left-10 w-64 h-64 bg-dourado-400 dark:bg-dourado-600/40 rounded-full blur-3xl animate-float" />
-            <div className="absolute bottom-20 right-10 w-96 h-96 bg-creme-400 dark:bg-dourado-500/30 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+            <div className="absolute bottom-20 right-10 w-96 h-96 bg-creme-400 dark:bg-dourado-500/30 rounded-full blur-3xl animate-float-delayed" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-dourado-300/20 dark:bg-dourado-700/20 rounded-full blur-3xl animate-float-slow" />
           </div>
 
           <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight text-gray-900 dark:text-white">
-                Sabor que{' '}
-                <span className="bg-gradient-to-r from-dourado-700 via-dourado-600 to-dourado-700 dark:from-dourado-500 dark:via-dourado-400 dark:to-dourado-500 bg-clip-text text-transparent">
-                  conquista!
-                </span>
-              </h1>
+            <HeroCarousel />
 
-              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-                Hambúrgueres artesanais preparados com ingredientes selecionados. 
-                Peça agora e receba quentinho em sua casa!
-              </p>
-
+            <div className="max-w-4xl mx-auto text-center mt-12">
               <button
                 onClick={() => {
                   document.getElementById('cardapio')?.scrollIntoView({ behavior: 'smooth' })
                 }}
-                className="btn-primary text-lg"
+                className="btn-primary text-lg shadow-2xl hover:shadow-dourado-500/50"
               >
-                Ver Cardápio
+                Ver Cardápio Completo
                 <ChevronDown className="w-5 h-5" />
               </button>
             </div>
@@ -154,12 +148,17 @@ export default function Home() {
         </section>
 
         {produtosDestaque.length > 0 && (
-          <section className="py-12 bg-gray-50 dark:bg-zinc-950/10">
-            <div className="container mx-auto px-4">
+          <section className="py-12 bg-gradient-to-b from-gray-50 to-white dark:from-zinc-950/10 dark:to-zinc-950 relative overflow-hidden">
+            <div className="absolute inset-0 bg-dots-pattern opacity-30 dark:opacity-20" />
+            
+            <div className="absolute top-10 right-10 w-40 h-40 bg-dourado-200/20 dark:bg-dourado-800/10 rounded-full blur-3xl animate-bounce-subtle" />
+            <div className="absolute bottom-10 left-10 w-32 h-32 bg-creme-300/20 dark:bg-creme-900/10 rounded-full blur-2xl animate-bounce-subtle" style={{ animationDelay: '1s' }} />
+            
+            <div className="container mx-auto px-4 relative z-10">
               <div className="flex items-center gap-3 mb-8">
-                <div className="h-1 w-12 bg-gradient-to-r from-dourado-600 to-dourado-400 rounded-full" />
+                <div className="h-1 w-12 bg-gradient-to-r from-dourado-600 to-dourado-400 rounded-full animate-pulse" />
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Star className="w-7 h-7 text-dourado-600 dark:text-dourado-500 fill-current" />
+                  <Star className="w-7 h-7 text-dourado-600 dark:text-dourado-500 fill-current animate-pulse" />
                   Os Mais Pedidos
                 </h2>
                 <div className="h-1 flex-grow bg-gradient-to-r from-dourado-400 to-transparent rounded-full" />
@@ -178,8 +177,10 @@ export default function Home() {
           </section>
         )}
 
-        <section id="cardapio" className="py-12">
-          <div className="container mx-auto px-4">
+        <section id="cardapio" className="py-12 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-dourado-50/20 to-transparent dark:via-dourado-950/10" />
+          
+          <div className="container mx-auto px-4 relative z-10">
             <div className="flex items-center gap-3 mb-8">
               <div className="h-1 w-12 bg-gradient-to-r from-dourado-600 to-dourado-400 rounded-full" />
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
