@@ -440,16 +440,16 @@ export function NotificationPermission() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10000] w-full max-w-md mx-4"
+              className="fixed inset-4 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:inset-auto z-[10000] w-auto sm:w-full sm:max-w-md max-h-[90vh] overflow-y-auto"
             >
               <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
+                <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 sm:p-6 text-white">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                        <Bell className="w-6 h-6" />
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                        <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
                       </div>
-                      <h3 className="text-xl font-bold">Notificações Ativas</h3>
+                      <h3 className="text-lg sm:text-xl font-bold">Notificações Ativas</h3>
                     </div>
                     <button
                       onClick={closePanel}
@@ -458,46 +458,46 @@ export function NotificationPermission() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
-                  <p className="text-green-50 text-sm">
+                  <p className="text-green-50 text-xs sm:text-sm">
                     Você está recebendo alertas em tempo real
                   </p>
                 </div>
 
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
-                    <div className="flex items-center gap-3">
-                      <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                       <div>
-                        <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                        <p className="text-xs sm:text-sm font-medium text-green-900 dark:text-green-100">
                           Sistema Ativo
                         </p>
-                        <p className="text-xs text-green-700 dark:text-green-400">
+                        <p className="text-[10px] sm:text-xs text-green-700 dark:text-green-400">
                           Recebendo notificações de novos pedidos
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                         {preferences.sound_enabled ? (
-                          <Volume2 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                          <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
                         ) : (
-                          <VolumeX className="w-5 h-5 text-zinc-400" />
+                          <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400 flex-shrink-0" />
                         )}
-                        <div>
-                          <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-white truncate">
                             Som das Notificações
                           </p>
-                          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                          <p className="text-[10px] sm:text-xs text-zinc-600 dark:text-zinc-400">
                             {preferences.sound_enabled ? 'Ativado' : 'Desativado'}
                           </p>
                         </div>
                       </div>
                       <button
                         onClick={toggleSound}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0
                                  ${preferences.sound_enabled ? 'bg-amber-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                       >
                         <span
@@ -511,7 +511,7 @@ export function NotificationPermission() {
                   <button
                     onClick={handleDisableNotifications}
                     disabled={loading}
-                    className="w-full px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium text-red-600 dark:text-red-400
                              bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30
                              rounded-xl transition-colors flex items-center justify-center gap-2
                              disabled:opacity-50 disabled:cursor-not-allowed"

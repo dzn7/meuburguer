@@ -148,14 +148,12 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
         }
       }
 
+      // Gerar mensagem e URL do WhatsApp
       const mensagemWhatsApp = gerarMensagemWhatsApp(pedido.id)
       const numeroWhatsApp = '5586988414326'
-      window.open(
-        `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagemWhatsApp)}`,
-        '_blank'
-      )
+      const whatsappUrl = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagemWhatsApp)}`
 
-      // Limpar carrinho e formulário
+      // Limpar carrinho e formulário ANTES de abrir WhatsApp
       limparCarrinho()
       setNomeCliente('')
       setTelefone('')
@@ -165,7 +163,29 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
       setObservacoes('')
       
       onFechar()
-      mostrarAlerta('sucesso', 'Pedido enviado!', 'Seu pedido foi enviado com sucesso via WhatsApp')
+      
+      // Tentar abrir WhatsApp - múltiplas estratégias para garantir abertura
+      try {
+        // Estratégia 1: Tentar window.open (funciona na maioria dos casos)
+        const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener,noreferrer')
+        
+        // Estratégia 2: Se bloqueado, usar window.location.href (força abertura)
+        if (!whatsappWindow || whatsappWindow.closed || typeof whatsappWindow.closed === 'undefined') {
+          console.log('[WhatsApp] Pop-up bloqueado, usando location.href')
+          // Aguardar um pouco para garantir que o pedido foi salvo
+          setTimeout(() => {
+            window.location.href = whatsappUrl
+          }, 100)
+        } else {
+          console.log('[WhatsApp] Aberto com sucesso via window.open')
+        }
+      } catch (error) {
+        // Estratégia 3: Fallback final - forçar redirecionamento
+        console.error('[WhatsApp] Erro ao abrir, usando fallback:', error)
+        window.location.href = whatsappUrl
+      }
+      
+      mostrarAlerta('sucesso', 'Pedido enviado!', 'Redirecionando para o WhatsApp...')
     } catch (error) {
       console.error('Erro ao enviar pedido:', error)
       mostrarAlerta('erro', 'Erro ao enviar', 'Não foi possível enviar o pedido. Por favor, tente novamente.')
