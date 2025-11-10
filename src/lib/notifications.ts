@@ -31,6 +31,8 @@ export async function showNotification(
 
 export async function notificarNovoPedido(pedidoId: string, nomeCliente: string, total?: number): Promise<void> {
   try {
+    console.log('[Notificações] Tentando notificar novo pedido:', { pedidoId, nomeCliente, total })
+    
     // Verificar preferências antes de enviar
     const canNotify = await checkNotificationPreferences(supabase)
     if (!canNotify) {
@@ -38,12 +40,16 @@ export async function notificarNovoPedido(pedidoId: string, nomeCliente: string,
       return
     }
 
+    console.log('[Notificações] Permissão concedida, enviando notificação...')
+
     // Usar função do push-notifications
     await pushNotifyNewPedido({
       id: pedidoId,
       nome_cliente: nomeCliente,
       total: total || 0,
     })
+
+    console.log('[Notificações] Notificação enviada com sucesso!')
 
     // Tocar som de notificação
     playNotificationSound()
@@ -148,17 +154,32 @@ export function setupRealtimeNotifications(supabase: any): () => void {
   console.log('[Notificações] Configurando monitoramento em tempo real')
   
   const channel = supabase
-    .channel('pedidos-notifications')
+    .channel('pedidos-notifications-realtime')
     .on('postgres_changes', 
       { event: 'INSERT', schema: 'public', table: 'pedidos' },
       async (payload: any) => {
-        console.log('[Notificações] Novo pedido detectado:', payload.new.id)
+        console.log('[Notificações] ✅ Novo pedido detectado via Realtime:', payload.new)
         
-        // Verifica se usuário tem notificações habilitadas
-        const hasPermission = await checkNotificationPreferences(supabase)
-        if (hasPermission) {
-          notificarNovoPedido(payload.new.id, payload.new.nome_cliente, payload.new.total)
-        }
+        // Aguardar um pouco para garantir que as preferências estão carregadas
+        setTimeout(async () => {
+          try {
+            // Verifica se usuário tem notificações habilitadas
+            const hasPermission = await checkNotificationPreferences(supabase)
+            console.log('[Notificações] Permissão verificada:', hasPermission)
+            
+            if (hasPermission) {
+              await notificarNovoPedido(
+                payload.new.id, 
+                payload.new.nome_cliente, 
+                payload.new.total
+              )
+            } else {
+              console.log('[Notificações] Notificações não habilitadas ou sem permissão')
+            }
+          } catch (error) {
+            console.error('[Notificações] Erro ao processar novo pedido:', error)
+          }
+        }, 500)
       }
     )
     .on('postgres_changes',
@@ -170,13 +191,22 @@ export function setupRealtimeNotifications(supabase: any): () => void {
           // Verifica se usuário tem notificações habilitadas
           const hasPermission = await checkNotificationPreferences(supabase)
           if (hasPermission) {
-            notificarPedidoAtualizado(payload.new.id, payload.new.status, payload.new.nome_cliente)
+            await notificarPedidoAtualizado(
+              payload.new.id, 
+              payload.new.status, 
+              payload.new.nome_cliente
+            )
           }
         }
       }
     )
     .subscribe((status: string) => {
-      console.log('[Notificações] Status da inscrição:', status)
+      console.log('[Notificações] Status da inscrição Realtime:', status)
+      if (status === 'SUBSCRIBED') {
+        console.log('[Notificações] ✅ Inscrito com sucesso no canal de notificações!')
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('[Notificações] ❌ Erro ao se inscrever no canal')
+      }
     })
 
   // Retorna função de cleanup

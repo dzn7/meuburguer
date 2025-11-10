@@ -95,6 +95,12 @@ export default function ProdutosPage() {
       const produto = produtos.find(p => p.id === id)
       const tabela = produto?.tabela || 'produtos'
 
+      // Validar valores numéricos antes de atualizar
+      if (campo === 'preco' && (isNaN(valor) || valor === null || valor === undefined || valor === '')) {
+        setSalvando(null)
+        return // Não atualiza se o valor for inválido
+      }
+
       const { error } = await supabase
         .from(tabela)
         .update({ [campo]: valor })
@@ -257,8 +263,22 @@ export default function ProdutosPage() {
                               <input
                                 type="number"
                                 step="0.01"
+                                min="0"
                                 value={produto.preco}
-                                onChange={(e) => atualizarProduto(produto.id, 'preco', parseFloat(e.target.value))}
+                                onChange={(e) => {
+                                  const valor = e.target.value
+                                  if (valor === '' || valor === null) return // Permite apagar sem erro
+                                  const numero = parseFloat(valor)
+                                  if (!isNaN(numero) && numero >= 0) {
+                                    atualizarProduto(produto.id, 'preco', numero)
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  // Ao sair do campo, se estiver vazio, restaura o valor anterior
+                                  if (e.target.value === '' || e.target.value === null) {
+                                    e.target.value = produto.preco.toString()
+                                  }
+                                }}
                                 className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
                                          dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white
                                          focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -277,8 +297,22 @@ export default function ProdutosPage() {
                                 type="number"
                                 min="0"
                                 max="100"
+                                step="1"
                                 value={produto.desconto || 0}
-                                onChange={(e) => aplicarDesconto(produto.id, parseFloat(e.target.value) || 0)}
+                                onChange={(e) => {
+                                  const valor = e.target.value
+                                  if (valor === '' || valor === null) return // Permite apagar sem erro
+                                  const numero = parseFloat(valor)
+                                  if (!isNaN(numero) && numero >= 0 && numero <= 100) {
+                                    aplicarDesconto(produto.id, numero)
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  // Ao sair do campo, se estiver vazio, define como 0
+                                  if (e.target.value === '' || e.target.value === null) {
+                                    aplicarDesconto(produto.id, 0)
+                                  }
+                                }}
                                 className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
                                          dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white
                                          focus:outline-none focus:ring-2 focus:ring-amber-500"

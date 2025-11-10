@@ -9,7 +9,7 @@ import PWAManagerAdmin from '@/components/admin/PWAManagerAdmin'
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Configurar notificações em tempo real
-    // A permissão agora é solicitada pelo NotificationButton
+    // A permissão é solicitada pelo NotificationPermission no AdminLayout
     const cleanup = setupRealtimeNotifications(supabase)
 
     return cleanup

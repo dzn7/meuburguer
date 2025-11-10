@@ -35,7 +35,7 @@ export function NotificationPermission() {
   const [permission, setPermission] = useState<NotificationPermission>('default')
   const [isSupported, setIsSupported] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
-  const [showIndicator, setShowIndicator] = useState(true)
+  const [showIndicator, setShowIndicator] = useState(false)
   const [loading, setLoading] = useState(false)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
@@ -66,7 +66,7 @@ export function NotificationPermission() {
       notifications_enabled: false,
       push_enabled: false,
     })
-    setShowIndicator(true)
+    setShowIndicator(false) // Não mostrar indicador após desabilitar
     setShowSuccessMessage(false)
     setIsPanelOpen(false)
   }
@@ -100,8 +100,13 @@ export function NotificationPermission() {
       setUserId(newUserId)
     }
 
+    // Não mostrar indicador se já tiver permissão
     if (currentPermission === 'granted') {
       setShowIndicator(false)
+    } else if (currentPermission === 'default') {
+      // Só mostrar indicador se não tiver sido perguntado ainda
+      const hasAsked = localStorage.getItem('notification-permission-asked')
+      setShowIndicator(!hasAsked)
     }
 
     const hasAsked = localStorage.getItem('notification-permission-asked')
@@ -259,7 +264,8 @@ export function NotificationPermission() {
     localStorage.setItem('notification-permission-asked', 'true')
   }
 
-  const shouldShowFloatingButton = !isPanelOpen
+  // Só mostrar botão flutuante se não estiver com painel aberto e não tiver indicador
+  const shouldShowFloatingButton = !isPanelOpen && !showIndicator
 
   const floatingButtonClass = notificationsActive
     ? 'fixed bottom-6 right-6 z-[9998] px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full shadow-2xl hover:shadow-amber-500/40 transition-all duration-300 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed'
@@ -275,7 +281,7 @@ export function NotificationPermission() {
 
   return (
     <>
-      {shouldShowFloatingButton && (
+      {shouldShowFloatingButton && notificationsActive && (
         <motion.button
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -286,13 +292,7 @@ export function NotificationPermission() {
           disabled={isActionPending || !isSupported}
           className={floatingButtonClass}
         >
-          {notificationsActive ? (
-            <Bell className="w-5 h-5" />
-          ) : isPermissionDenied ? (
-            <BellOff className="w-5 h-5" />
-          ) : (
-            <Bell className="w-5 h-5" />
-          )}
+          <Bell className="w-5 h-5" />
           <span className="hidden sm:inline text-sm font-medium">{floatingButtonLabel}</span>
         </motion.button>
       )}
@@ -348,19 +348,20 @@ export function NotificationPermission() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showIndicator && permission !== 'denied' && (
+        {showIndicator && permission !== 'denied' && !isPanelOpen && (
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-20 right-4 z-[9999]"
+            className="fixed bottom-6 right-6 z-[9998]"
           >
             <button
-              onClick={() => setShowBanner(true)}
-              className="p-3 rounded-full shadow-lg transition-colors bg-yellow-500 text-white hover:bg-yellow-600 animate-pulse"
-              title="Clique para ativar notificações"
+              onClick={handleFloatingButtonClick}
+              className="px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full shadow-2xl hover:shadow-amber-500/50 transition-all duration-300 flex items-center gap-2 animate-pulse"
+              title="Ativar notificações"
             >
-              <BellOff className="w-5 h-5" />
+              <Bell className="w-5 h-5" />
+              <span className="hidden sm:inline text-sm font-medium">Ativar notificações</span>
             </button>
           </motion.div>
         )}
@@ -379,6 +380,107 @@ export function NotificationPermission() {
               <span className="text-sm font-medium">Notificações ativadas com sucesso!</span>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Painel de Configurações */}
+      <AnimatePresence>
+        {isPanelOpen && notificationsActive && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closePanel}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[10000] w-full max-w-md mx-4"
+            >
+              <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                        <Bell className="w-6 h-6" />
+                      </div>
+                      <h3 className="text-xl font-bold">Notificações Ativas</h3>
+                    </div>
+                    <button
+                      onClick={closePanel}
+                      className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className="text-green-50 text-sm">
+                    Você está recebendo alertas em tempo real
+                  </p>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-3">
+                      <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      <div>
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                          Sistema Ativo
+                        </p>
+                        <p className="text-xs text-green-700 dark:text-green-400">
+                          Recebendo notificações de novos pedidos
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {preferences.sound_enabled ? (
+                          <Volume2 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        ) : (
+                          <VolumeX className="w-5 h-5 text-zinc-400" />
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                            Som das Notificações
+                          </p>
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                            {preferences.sound_enabled ? 'Ativado' : 'Desativado'}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={toggleSound}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                                 ${preferences.sound_enabled ? 'bg-amber-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                                   ${preferences.sound_enabled ? 'translate-x-6' : 'translate-x-1'}`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleDisableNotifications}
+                    disabled={loading}
+                    className="w-full px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400
+                             bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30
+                             rounded-xl transition-colors flex items-center justify-center gap-2
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <BellOff className="w-4 h-4" />
+                    Desativar Notificações
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
