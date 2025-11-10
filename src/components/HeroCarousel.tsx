@@ -15,6 +15,12 @@ const slides = [
     titulo: 'Qualidade em cada mordida',
     subtitulo: 'Peça agora e receba quentinho em sua casa',
   },
+  {
+    id: 3,
+    imagem: '/assets/hero/hero3.webp',
+    titulo: 'Experiência única!',
+    subtitulo: 'Descubra o verdadeiro sabor do Meu Burguer!',
+  },
 ]
 
 export default function HeroCarousel() {

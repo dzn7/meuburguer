@@ -264,19 +264,23 @@ export default function ProdutosPage() {
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                value={produto.preco}
-                                onChange={(e) => {
+                                defaultValue={produto.preco}
+                                onBlur={(e) => {
                                   const valor = e.target.value
-                                  if (valor === '' || valor === null) return // Permite apagar sem erro
+                                  if (valor === '' || valor === null) {
+                                    e.target.value = produto.preco.toString()
+                                    return
+                                  }
                                   const numero = parseFloat(valor)
                                   if (!isNaN(numero) && numero >= 0) {
                                     atualizarProduto(produto.id, 'preco', numero)
+                                  } else {
+                                    e.target.value = produto.preco.toString()
                                   }
                                 }}
-                                onBlur={(e) => {
-                                  // Ao sair do campo, se estiver vazio, restaura o valor anterior
-                                  if (e.target.value === '' || e.target.value === null) {
-                                    e.target.value = produto.preco.toString()
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.currentTarget.blur()
                                   }
                                 }}
                                 className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
