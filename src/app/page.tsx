@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronDown, Star, ClipboardList, Search } from 'lucide-react'
+import { ClipboardList, Search } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import HeroCarousel from '@/components/HeroCarousel'
@@ -114,8 +114,6 @@ export default function Home() {
         )
       : []
 
-  const produtosDestaque = produtos.filter((p) => p.destaque)
-
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Header />
@@ -132,50 +130,8 @@ export default function Home() {
 
           <div className="container mx-auto px-4 relative z-10">
             <HeroCarousel />
-
-            <div className="max-w-4xl mx-auto text-center mt-12">
-              <button
-                onClick={() => {
-                  document.getElementById('cardapio')?.scrollIntoView({ behavior: 'smooth' })
-                }}
-                className="btn-primary text-lg shadow-2xl hover:shadow-dourado-500/50"
-              >
-                Ver Cardápio Completo
-                <ChevronDown className="w-5 h-5" />
-              </button>
-            </div>
           </div>
         </section>
-
-        {produtosDestaque.length > 0 && (
-          <section className="py-12 bg-gradient-to-b from-gray-50 to-white dark:from-zinc-950/10 dark:to-zinc-950 relative overflow-hidden">
-            <div className="absolute inset-0 bg-dots-pattern opacity-30 dark:opacity-20" />
-            
-            <div className="absolute top-10 right-10 w-40 h-40 bg-dourado-200/20 dark:bg-dourado-800/10 rounded-full blur-3xl animate-bounce-subtle" />
-            <div className="absolute bottom-10 left-10 w-32 h-32 bg-creme-300/20 dark:bg-creme-900/10 rounded-full blur-2xl animate-bounce-subtle" style={{ animationDelay: '1s' }} />
-            
-            <div className="container mx-auto px-4 relative z-10">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="h-1 w-12 bg-gradient-to-r from-dourado-600 to-dourado-400 rounded-full animate-pulse" />
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Star className="w-7 h-7 text-dourado-600 dark:text-dourado-500 fill-current animate-pulse" />
-                  Os Mais Pedidos
-                </h2>
-                <div className="h-1 flex-grow bg-gradient-to-r from-dourado-400 to-transparent rounded-full" />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {produtosDestaque.map((produto) => (
-                  <CartaoProduto
-                    key={produto.id}
-                    produto={produto}
-                    onAdicionar={abrirModalComplementos}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
 
         <section id="cardapio" className="py-12 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-dourado-50/20 to-transparent dark:via-dourado-950/10" />

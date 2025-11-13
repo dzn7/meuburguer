@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const slides = [
   {
@@ -26,6 +26,10 @@ const slides = [
 export default function HeroCarousel() {
   const [slideAtual, setSlideAtual] = useState(0)
   const [montado, setMontado] = useState(false)
+  const [arrastando, setArrastando] = useState(false)
+  const [posicaoInicial, setPosicaoInicial] = useState(0)
+  const [posicaoAtual, setPosicaoAtual] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMontado(true)
@@ -45,8 +49,82 @@ export default function HeroCarousel() {
     setSlideAtual(index)
   }
 
+  const iniciarArraste = (posicaoX: number) => {
+    setArrastando(true)
+    setPosicaoInicial(posicaoX)
+    setPosicaoAtual(posicaoX)
+  }
+
+  const duranteArraste = (posicaoX: number) => {
+    if (!arrastando) return
+    setPosicaoAtual(posicaoX)
+  }
+
+  const finalizarArraste = () => {
+    if (!arrastando) return
+    
+    const diferenca = posicaoInicial - posicaoAtual
+    const limiteMinimo = 50 // Sensibilidade do arraste
+    
+    if (Math.abs(diferenca) > limiteMinimo) {
+      if (diferenca > 0) {
+        // Arrastar para esquerda - próximo slide
+        setSlideAtual((prev) => (prev + 1) % slides.length)
+      } else {
+        // Arrastar para direita - slide anterior
+        setSlideAtual((prev) => (prev - 1 + slides.length) % slides.length)
+      }
+    }
+    
+    setArrastando(false)
+    setPosicaoInicial(0)
+    setPosicaoAtual(0)
+  }
+
+  // Handlers para mouse
+  const handleMouseDown = (e: React.MouseEvent) => {
+    iniciarArraste(e.clientX)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    duranteArraste(e.clientX)
+  }
+
+  const handleMouseUp = () => {
+    finalizarArraste()
+  }
+
+  const handleMouseLeave = () => {
+    if (arrastando) {
+      finalizarArraste()
+    }
+  }
+
+  // Handlers para touch
+  const handleTouchStart = (e: React.TouchEvent) => {
+    iniciarArraste(e.touches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    duranteArraste(e.touches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    finalizarArraste()
+  }
+
   return (
-    <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-br from-dourado-100 to-creme-100 dark:from-zinc-900 dark:to-zinc-800">
+    <div 
+      ref={containerRef}
+      className="relative w-full h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-br from-dourado-100 to-creme-100 dark:from-zinc-900 dark:to-zinc-800 cursor-grab active:cursor-grabbing"
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {montado && slides.map((slide, index) => (
         <div
           key={slide.id}
