@@ -1,17 +1,22 @@
 /**
  * Utilitário para processamento de recorte de imagens
  * Utiliza Canvas API para manipulação eficiente de imagens
- * Inclui compressão automática para manter arquivos abaixo de 5MB
+ * Otimizado para economizar espaço no Supabase Storage (plano Free)
+ * 
+ * LIMITES OTIMIZADOS:
+ * - Tamanho máximo: 1MB (para economizar storage)
+ * - Dimensão máxima: 1200px (suficiente para web)
+ * - Qualidade: 85% (bom equilíbrio qualidade/tamanho)
  */
 
-// Limite máximo de tamanho do arquivo em bytes (5MB)
-const TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024
+// Limite máximo de tamanho do arquivo em bytes (1MB para economizar storage)
+const TAMANHO_MAXIMO_BYTES = 1 * 1024 * 1024
 
-// Dimensão máxima para redimensionamento automático
-const DIMENSAO_MAXIMA = 1920
+// Dimensão máxima para redimensionamento automático (1200px é suficiente para web)
+const DIMENSAO_MAXIMA = 1200
 
-// Qualidade inicial para compressão JPEG
-const QUALIDADE_INICIAL = 0.92
+// Qualidade inicial para compressão JPEG (85% é um bom equilíbrio)
+const QUALIDADE_INICIAL = 0.85
 
 export type AreaRecorte = {
   x: number

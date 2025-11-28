@@ -11,7 +11,10 @@ import {
   Crop, 
   Upload,
   Trash2,
-  ImageIcon
+  ImageIcon,
+  Plus,
+  X,
+  Save
 } from 'lucide-react'
 import ProtectedRoute from '@/components/admin/ProtectedRoute'
 import AdminLayout from '@/components/admin/AdminLayout'
@@ -70,6 +73,21 @@ export default function ProdutosPage() {
     id: string
     tabela: string
   } | null>(null)
+
+  // Estados para o modal de novo produto
+  const [modalNovoProduto, setModalNovoProduto] = useState(false)
+  const [novoProduto, setNovoProduto] = useState({
+    nome: '',
+    descricao: '',
+    preco: '',
+    categoria: 'Hambúrgueres',
+  })
+  const [imagemNovoProduto, setImagemNovoProduto] = useState<string | null>(null)
+  const [blobNovoProduto, setBlobNovoProduto] = useState<Blob | null>(null)
+  const [salvandoNovoProduto, setSalvandoNovoProduto] = useState(false)
+  const inputFileNovoProdutoRef = useRef<HTMLInputElement>(null)
+  const [recorteNovoProduto, setRecorteNovoProduto] = useState(false)
+  const [imagemParaRecorte, setImagemParaRecorte] = useState('')
 
   useEffect(() => {
     carregarProdutos()
@@ -357,7 +375,121 @@ export default function ProdutosPage() {
     }
   }, [])
 
+  // Funções para o novo produto
+  const abrirModalNovoProduto = () => {
+    setNovoProduto({ nome: '', descricao: '', preco: '', categoria: 'Hambúrgueres' })
+    setImagemNovoProduto(null)
+    setBlobNovoProduto(null)
+    setModalNovoProduto(true)
+  }
+
+  const selecionarImagemNovoProduto = async (evento: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = evento.target.files?.[0]
+    if (!arquivo) return
+
+    const validacao = validarArquivoImagem(arquivo)
+    if (!validacao.valido) {
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Arquivo Inválido',
+        mensagem: validacao.erro || 'O arquivo selecionado não é válido.'
+      })
+      evento.target.value = ''
+      return
+    }
+
+    try {
+      const urlImagem = await arquivoParaUrl(arquivo)
+      setImagemParaRecorte(urlImagem)
+      setRecorteNovoProduto(true)
+    } catch (erro) {
+      console.error('Erro ao ler arquivo:', erro)
+    }
+    evento.target.value = ''
+  }
+
+  const confirmarRecorteNovoProduto = (base64: string, blob: Blob) => {
+    setImagemNovoProduto(base64)
+    setBlobNovoProduto(blob)
+    setRecorteNovoProduto(false)
+  }
+
+  const salvarNovoProduto = async () => {
+    if (!novoProduto.nome || !novoProduto.preco) {
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'aviso',
+        titulo: 'Campos Obrigatórios',
+        mensagem: 'Preencha o nome e o preço do produto.'
+      })
+      return
+    }
+
+    setSalvandoNovoProduto(true)
+    try {
+      // Primeiro, cria o produto
+      const { data: produtoCriado, error: erroCriacao } = await supabase
+        .from('produtos')
+        .insert({
+          nome: novoProduto.nome,
+          descricao: novoProduto.descricao || null,
+          preco: parseFloat(novoProduto.preco),
+          categoria: novoProduto.categoria,
+          disponivel: true,
+        })
+        .select()
+        .single()
+
+      if (erroCriacao) throw erroCriacao
+
+      // Se tem imagem, faz upload
+      if (blobNovoProduto && produtoCriado) {
+        const nomeArquivo = `produtos/${produtoCriado.id}_${Date.now()}.jpg`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('imagens')
+          .upload(nomeArquivo, blobNovoProduto, {
+            contentType: 'image/jpeg',
+            upsert: true
+          })
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('imagens')
+            .getPublicUrl(nomeArquivo)
+
+          await supabase
+            .from('produtos')
+            .update({ imagem_url: urlData.publicUrl })
+            .eq('id', produtoCriado.id)
+        }
+      }
+
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'sucesso',
+        titulo: 'Produto Criado',
+        mensagem: 'O produto foi cadastrado com sucesso!'
+      })
+
+      setModalNovoProduto(false)
+      carregarProdutos()
+    } catch (erro) {
+      console.error('Erro ao criar produto:', erro)
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Erro ao Criar',
+        mensagem: 'Não foi possível criar o produto. Tente novamente.'
+      })
+    } finally {
+      setSalvandoNovoProduto(false)
+    }
+  }
+
   const categorias = Array.from(new Set(produtos.map(p => p.categoria)))
+  const categoriasDisponiveis = ['Hambúrgueres', 'Combos', 'Porções', 'Sobremesas']
 
   return (
     <ProtectedRoute>
@@ -373,15 +505,25 @@ export default function ProdutosPage() {
                 Edite preços, nomes e aplique descontos em tempo real
               </p>
             </div>
-            <button
-              onClick={carregarProdutos}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white 
-                       rounded-lg transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Atualizar
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={abrirModalNovoProduto}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white 
+                         rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Novo Produto
+              </button>
+              <button
+                onClick={carregarProdutos}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white 
+                         rounded-lg transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -611,6 +753,171 @@ export default function ProdutosPage() {
           proporcaoInicial={1}
           titulo="Ajustar Imagem do Produto"
         />
+
+        {/* Modal de recorte para novo produto */}
+        <ModalRecorteImagem
+          aberto={recorteNovoProduto}
+          imagemUrl={imagemParaRecorte}
+          onFechar={() => setRecorteNovoProduto(false)}
+          onConfirmar={confirmarRecorteNovoProduto}
+          proporcaoInicial={1}
+          titulo="Ajustar Imagem do Novo Produto"
+        />
+
+        {/* Modal de novo produto */}
+        {modalNovoProduto && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setModalNovoProduto(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg p-6"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-green-600" />
+                  Novo Produto
+                </h2>
+                <button
+                  onClick={() => setModalNovoProduto(false)}
+                  className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg"
+                >
+                  <X className="w-5 h-5 text-zinc-500" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Imagem */}
+                <div className="flex flex-col items-center gap-3">
+                  <div 
+                    onClick={() => inputFileNovoProdutoRef.current?.click()}
+                    className="w-32 h-32 rounded-xl border-2 border-dashed border-zinc-300 dark:border-zinc-700 
+                             flex items-center justify-center cursor-pointer hover:border-amber-500 transition-colors
+                             overflow-hidden bg-zinc-50 dark:bg-zinc-800"
+                  >
+                    {imagemNovoProduto ? (
+                      <img src={imagemNovoProduto} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center">
+                        <Camera className="w-8 h-8 text-zinc-400 mx-auto mb-1" />
+                        <span className="text-xs text-zinc-500">Adicionar foto</span>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={inputFileNovoProdutoRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={selecionarImagemNovoProduto}
+                    className="hidden"
+                  />
+                  <p className="text-xs text-zinc-500">Máximo 1MB após compressão</p>
+                </div>
+
+                {/* Nome */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Nome do Produto *
+                  </label>
+                  <input
+                    type="text"
+                    value={novoProduto.nome}
+                    onChange={(e) => setNovoProduto({ ...novoProduto, nome: e.target.value })}
+                    placeholder="Ex: X-Burguer Especial"
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
+                             bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
+                             focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+
+                {/* Descrição */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Descrição
+                  </label>
+                  <textarea
+                    value={novoProduto.descricao}
+                    onChange={(e) => setNovoProduto({ ...novoProduto, descricao: e.target.value })}
+                    placeholder="Descreva os ingredientes..."
+                    rows={2}
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
+                             bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
+                             focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                  />
+                </div>
+
+                {/* Preço e Categoria */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Preço (R$) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={novoProduto.preco}
+                      onChange={(e) => setNovoProduto({ ...novoProduto, preco: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
+                               bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
+                               focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Categoria
+                    </label>
+                    <select
+                      value={novoProduto.categoria}
+                      onChange={(e) => setNovoProduto({ ...novoProduto, categoria: e.target.value })}
+                      className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
+                               bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
+                               focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      {categoriasDisponiveis.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Botões */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setModalNovoProduto(false)}
+                    className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
+                             text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800
+                             transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={salvarNovoProduto}
+                    disabled={salvandoNovoProduto}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 
+                             hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {salvandoNovoProduto ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Salvar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
         <ModalNotificacao
           aberto={modalNotificacao.aberto}

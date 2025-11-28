@@ -21,6 +21,24 @@ const slides = [
     titulo: 'Experiência única!',
     subtitulo: 'Descubra o verdadeiro sabor do Meu Burguer!',
   },
+  {
+    id: 4,
+    imagem: '/assets/hero/hero4.webp',
+    titulo: 'Feito com amor!',
+    subtitulo: 'Cada hambúrguer é preparado com carinho especial',
+  },
+  {
+    id: 5,
+    imagem: '/assets/hero/hero5.webp',
+    titulo: 'Ingredientes frescos!',
+    subtitulo: 'Selecionamos os melhores ingredientes para você',
+  },
+  {
+    id: 6,
+    imagem: '/assets/hero/hero6.webp',
+    titulo: 'Tradição e sabor!',
+    subtitulo: 'O melhor hambúrguer da região está aqui',
+  },
 ]
 
 export default function HeroCarousel() {
@@ -40,7 +58,7 @@ export default function HeroCarousel() {
     
     const timer = setInterval(() => {
       setSlideAtual((prev) => (prev + 1) % slides.length)
-    }, 8000)
+    }, 5000) // 5 segundos
 
     return () => clearInterval(timer)
   }, [montado])
