@@ -193,6 +193,10 @@ export async function obterImagemRecortada(
     return null
   }
   
+  // Preenche com fundo branco para evitar fundo preto em PNGs transparentes
+  ctxFinal.fillStyle = '#FFFFFF'
+  ctxFinal.fillRect(0, 0, larguraFinal, alturaFinal)
+  
   // Usa interpolação de alta qualidade
   ctxFinal.imageSmoothingEnabled = true
   ctxFinal.imageSmoothingQuality = 'high'

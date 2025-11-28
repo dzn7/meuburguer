@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 import {
   X,
   ZoomIn,
@@ -17,6 +18,8 @@ import {
   Maximize2,
   Square,
   Loader2,
+  Plus,
+  Eye,
 } from 'lucide-react'
 import {
   obterImagemRecortada,
@@ -83,10 +86,65 @@ export default function ModalRecorteImagem({
   // Estados de UI
   const [processando, setProcessando] = useState(false)
   const [erroProcessamento, setErroProcessamento] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [gerandoPreview, setGerandoPreview] = useState(false)
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Referência para controle de zoom via slider
   const zoomMinimo = 1
   const zoomMaximo = 3
+
+  // Gera preview em tempo real com debounce
+  const gerarPreview = useCallback(async () => {
+    if (!areaRecortada || !imagemUrl) return
+    
+    setGerandoPreview(true)
+    try {
+      const blobRecortado = await obterImagemRecortada(
+        imagemUrl,
+        areaRecortada,
+        rotacao,
+        flip
+      )
+      
+      if (blobRecortado) {
+        const url = URL.createObjectURL(blobRecortado)
+        setPreviewUrl((prev) => {
+          if (prev) URL.revokeObjectURL(prev)
+          return url
+        })
+      }
+    } catch (erro) {
+      console.error('Erro ao gerar preview:', erro)
+    } finally {
+      setGerandoPreview(false)
+    }
+  }, [areaRecortada, imagemUrl, rotacao, flip])
+
+  // Atualiza preview com debounce quando os parâmetros mudam
+  useEffect(() => {
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current)
+    }
+    
+    previewTimeoutRef.current = setTimeout(() => {
+      gerarPreview()
+    }, 300) // 300ms de debounce
+    
+    return () => {
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current)
+      }
+    }
+  }, [gerarPreview])
+
+  // Limpa preview URL ao fechar
+  useEffect(() => {
+    if (!aberto && previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(null)
+    }
+  }, [aberto, previewUrl])
 
   const aoCompletarRecorte = useCallback(
     (_areaCortada: Area, areaPixels: Area) => {
@@ -102,7 +160,11 @@ export default function ModalRecorteImagem({
     setFlip({ horizontal: false, vertical: false })
     setProporcao(proporcaoInicial)
     setErroProcessamento(null)
-  }, [proporcaoInicial])
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(null)
+    }
+  }, [proporcaoInicial, previewUrl])
 
   const rotacionarEsquerda = useCallback(() => {
     setRotacao((prev) => (prev - 90) % 360)
@@ -211,30 +273,90 @@ export default function ModalRecorteImagem({
               </button>
             </div>
 
-            {/* Área do Cropper */}
-            <div className="relative flex-1 min-h-[300px] md:min-h-[400px] bg-zinc-950">
-              {/* @ts-expect-error - Dynamic import typing issue */}
-              <Cropper
-                image={imagemUrl}
-                crop={crop}
-                zoom={zoom}
-                rotation={rotacao}
-                aspect={proporcao === 0 ? 4/3 : proporcao}
-                onCropChange={setCrop}
-                onZoomChange={setZoom}
-                onCropComplete={aoCompletarRecorte}
-                cropShape="rect"
-                showGrid={true}
-                style={{
-                  containerStyle: {
-                    backgroundColor: '#09090b',
-                  },
-                  cropAreaStyle: {
-                    border: '2px solid #ca8a04',
-                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
-                  },
-                }}
-              />
+            {/* Área do Cropper + Preview */}
+            <div className="flex flex-col md:flex-row flex-1 min-h-[300px] md:min-h-[400px]">
+              {/* Cropper */}
+              <div className="relative flex-1 bg-zinc-950">
+                {/* @ts-expect-error - Dynamic import typing issue */}
+                <Cropper
+                  image={imagemUrl}
+                  crop={crop}
+                  zoom={zoom}
+                  rotation={rotacao}
+                  aspect={proporcao === 0 ? 4/3 : proporcao}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={aoCompletarRecorte}
+                  cropShape="rect"
+                  showGrid={true}
+                  style={{
+                    containerStyle: {
+                      backgroundColor: '#09090b',
+                    },
+                    cropAreaStyle: {
+                      border: '2px solid #ca8a04',
+                      boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
+                    },
+                  }}
+                />
+              </div>
+
+              {/* Preview do Card */}
+              <div className="w-full md:w-64 bg-zinc-100 dark:bg-zinc-800 p-4 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-zinc-200 dark:border-zinc-700">
+                <div className="flex items-center gap-2 mb-3">
+                  <Eye className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Preview do Card
+                  </span>
+                </div>
+                
+                {/* Card Preview - Estilo igual ao site do cliente */}
+                <div className="bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-lg w-full max-w-[180px] border border-zinc-200 dark:border-zinc-700">
+                  {/* Imagem do Card */}
+                  <div className="relative w-full aspect-[3/4] overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                    {gerandoPreview ? (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 text-amber-600 animate-spin" />
+                      </div>
+                    ) : previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <ImageIcon className="w-8 h-8 text-zinc-400" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Info do Card */}
+                  <div className="p-3">
+                    <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide">
+                      Exemplo
+                    </span>
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white line-clamp-1 mt-0.5">
+                      Nome do Produto
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
+                      Descrição breve
+                    </p>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                      <span className="text-base font-extrabold text-amber-600">
+                        R$ 29,90
+                      </span>
+                      <div className="bg-amber-500 text-white p-1.5 rounded-full">
+                        <Plus className="w-3 h-3" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-3 text-center">
+                  Assim ficará no cardápio
+                </p>
+              </div>
             </div>
 
             {/* Controles */}
