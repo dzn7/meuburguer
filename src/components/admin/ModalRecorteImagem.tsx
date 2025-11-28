@@ -274,9 +274,9 @@ export default function ModalRecorteImagem({
             </div>
 
             {/* Área do Cropper + Preview */}
-            <div className="flex flex-col md:flex-row flex-1 min-h-[300px] md:min-h-[400px]">
-              {/* Cropper */}
-              <div className="relative flex-1 bg-zinc-950">
+            <div className="flex flex-1 min-h-[250px] md:min-h-[400px]">
+              {/* Cropper - Ocupa maior parte */}
+              <div className="relative flex-1 bg-zinc-950 min-h-[250px]">
                 {/* @ts-expect-error - Dynamic import typing issue */}
                 <Cropper
                   image={imagemUrl}
@@ -301,22 +301,22 @@ export default function ModalRecorteImagem({
                 />
               </div>
 
-              {/* Preview do Card */}
-              <div className="w-full md:w-64 bg-zinc-100 dark:bg-zinc-800 p-4 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l border-zinc-200 dark:border-zinc-700">
-                <div className="flex items-center gap-2 mb-3">
-                  <Eye className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Preview do Card
+              {/* Preview do Card - Sidebar */}
+              <div className="w-32 md:w-48 bg-zinc-800 p-2 md:p-3 flex flex-col items-center border-l border-zinc-700 overflow-y-auto">
+                <div className="flex items-center gap-1 mb-2">
+                  <Eye className="w-3 h-3 text-amber-500" />
+                  <span className="text-[10px] md:text-xs font-medium text-zinc-400">
+                    Preview
                   </span>
                 </div>
                 
-                {/* Card Preview - Estilo igual ao site do cliente */}
-                <div className="bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-lg w-full max-w-[180px] border border-zinc-200 dark:border-zinc-700">
+                {/* Card Preview Compacto */}
+                <div className="bg-zinc-900 rounded-lg overflow-hidden shadow-lg w-full border border-zinc-700">
                   {/* Imagem do Card */}
-                  <div className="relative w-full aspect-[3/4] overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+                  <div className="relative w-full aspect-[3/4] overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900">
                     {gerandoPreview ? (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 text-amber-600 animate-spin" />
+                        <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
                       </div>
                     ) : previewUrl ? (
                       <img
@@ -324,38 +324,37 @@ export default function ModalRecorteImagem({
                         alt="Preview"
                         className="w-full h-full object-cover"
                       />
+                    ) : imagemUrl ? (
+                      <img
+                        src={imagemUrl}
+                        alt="Original"
+                        className="w-full h-full object-cover opacity-50"
+                      />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <ImageIcon className="w-8 h-8 text-zinc-400" />
+                        <ImageIcon className="w-6 h-6 text-zinc-600" />
                       </div>
                     )}
                   </div>
                   
                   {/* Info do Card */}
-                  <div className="p-3">
-                    <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide">
+                  <div className="p-2">
+                    <span className="text-[8px] font-semibold text-amber-500 uppercase">
                       Exemplo
                     </span>
-                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white line-clamp-1 mt-0.5">
-                      Nome do Produto
+                    <h3 className="text-[10px] md:text-xs font-bold text-white line-clamp-1">
+                      Produto
                     </h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
-                      Descrição breve
-                    </p>
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-                      <span className="text-base font-extrabold text-amber-600">
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs font-bold text-amber-500">
                         R$ 29,90
                       </span>
-                      <div className="bg-amber-500 text-white p-1.5 rounded-full">
-                        <Plus className="w-3 h-3" />
+                      <div className="bg-amber-500 text-white p-1 rounded-full">
+                        <Plus className="w-2 h-2" />
                       </div>
                     </div>
                   </div>
                 </div>
-                
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-3 text-center">
-                  Assim ficará no cardápio
-                </p>
               </div>
             </div>
 

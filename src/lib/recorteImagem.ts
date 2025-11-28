@@ -70,12 +70,39 @@ export const obterTamanhoRotacionado = (
  */
 async function comprimirCanvasParaBlob(
   canvas: HTMLCanvasElement,
-  qualidadeInicial: number = QUALIDADE_INICIAL
+  qualidadeInicial: number = QUALIDADE_INICIAL,
+  manterTransparencia: boolean = false
 ): Promise<Blob | null> {
   let qualidade = qualidadeInicial
   let blob: Blob | null = null
   
-  // Tenta comprimir reduzindo a qualidade progressivamente
+  // Formato: PNG para transparência, JPEG para compressão
+  const formato = manterTransparencia ? 'image/png' : 'image/jpeg'
+  
+  // Para PNG, não usamos qualidade progressiva
+  if (manterTransparencia) {
+    blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), 'image/png')
+    })
+    
+    // Se PNG estiver muito grande, converte para JPEG com fundo branco
+    if (blob && blob.size > TAMANHO_MAXIMO_BYTES) {
+      const canvasJpeg = document.createElement('canvas')
+      canvasJpeg.width = canvas.width
+      canvasJpeg.height = canvas.height
+      const ctxJpeg = canvasJpeg.getContext('2d')
+      if (ctxJpeg) {
+        ctxJpeg.fillStyle = '#FFFFFF'
+        ctxJpeg.fillRect(0, 0, canvas.width, canvas.height)
+        ctxJpeg.drawImage(canvas, 0, 0)
+        return comprimirCanvasParaBlob(canvasJpeg, 0.85, false)
+      }
+    }
+    
+    return blob
+  }
+  
+  // Tenta comprimir reduzindo a qualidade progressivamente (JPEG)
   while (qualidade >= 0.1) {
     blob = await new Promise<Blob | null>((resolve) => {
       canvas.toBlob(
@@ -109,7 +136,7 @@ async function comprimirCanvasParaBlob(
       ctxReduzido.drawImage(canvas, 0, 0, novaLargura, novaAltura)
       
       // Tenta novamente com o canvas reduzido
-      return comprimirCanvasParaBlob(canvasReduzido, 0.85)
+      return comprimirCanvasParaBlob(canvasReduzido, 0.85, false)
     }
   }
   
@@ -193,17 +220,13 @@ export async function obterImagemRecortada(
     return null
   }
   
-  // Preenche com fundo branco para evitar fundo preto em PNGs transparentes
-  ctxFinal.fillStyle = '#FFFFFF'
-  ctxFinal.fillRect(0, 0, larguraFinal, alturaFinal)
-  
   // Usa interpolação de alta qualidade
   ctxFinal.imageSmoothingEnabled = true
   ctxFinal.imageSmoothingQuality = 'high'
   ctxFinal.drawImage(canvasTemp, 0, 0, larguraFinal, alturaFinal)
 
-  // Comprime e retorna o blob otimizado
-  return comprimirCanvasParaBlob(canvasFinal)
+  // Comprime e retorna o blob otimizado (mantendo transparência se possível)
+  return comprimirCanvasParaBlob(canvasFinal, QUALIDADE_INICIAL, true)
 }
 
 /**
