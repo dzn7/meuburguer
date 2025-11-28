@@ -30,12 +30,6 @@ const slides = [
   {
     id: 5,
     imagem: '/assets/hero/hero5.webp',
-    titulo: 'Ingredientes frescos!',
-    subtitulo: 'Selecionamos os melhores ingredientes para você',
-  },
-  {
-    id: 6,
-    imagem: '/assets/hero/hero6.webp',
     titulo: 'Tradição e sabor!',
     subtitulo: 'O melhor hambúrguer da região está aqui',
   },

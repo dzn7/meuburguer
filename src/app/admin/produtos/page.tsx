@@ -495,33 +495,33 @@ export default function ProdutosPage() {
     <ProtectedRoute>
       <AdminLayout>
         <div className="p-4 md:p-6 lg:p-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
-                <Package className="w-8 h-8 text-amber-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-2 sm:gap-3">
+                <Package className="w-6 h-6 sm:w-8 sm:h-8 text-amber-600" />
                 Gerenciar Produtos
               </h1>
-              <p className="text-zinc-600 dark:text-zinc-400 mt-1">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1 hidden sm:block">
                 Edite preços, nomes e aplique descontos em tempo real
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={abrirModalNovoProduto}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white 
-                         rounded-lg transition-colors"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 
+                         bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm sm:text-base"
               >
                 <Plus className="w-4 h-4" />
-                Novo Produto
+                <span className="sm:inline">Novo</span>
               </button>
               <button
                 onClick={carregarProdutos}
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white 
-                         rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-700 
+                         text-white rounded-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Atualizar
+                <span className="hidden sm:inline">Atualizar</span>
               </button>
             </div>
           </div>
@@ -537,146 +537,227 @@ export default function ProdutosPage() {
                   key={categoria}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-6"
+                  className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 sm:p-6 overflow-hidden"
                 >
                   <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
                     <span className="w-1 h-6 bg-amber-600 rounded-full"></span>
                     {categoria}
                   </h2>
 
-                  <div className="grid gap-4">
+                  <div className="space-y-3">
                     {produtos
                       .filter(p => p.categoria === categoria)
                       .map((produto) => (
                         <div
                           key={produto.id}
-                          className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-zinc-50 dark:bg-zinc-800 
-                                   rounded-lg border border-zinc-200 dark:border-zinc-700"
+                          className="bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3 md:p-4"
                         >
-                          {/* Imagem com controles de edição */}
-                          <div className="md:col-span-2 flex flex-col items-center justify-center gap-2">
-                            <div className="relative group">
-                              {produto.imagem_url ? (
-                                <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+                          {/* Layout Mobile: Imagem + Info lado a lado */}
+                          <div className="flex gap-3 md:hidden">
+                            {/* Imagem Mobile */}
+                            <div className="flex-shrink-0">
+                              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-zinc-200 dark:bg-zinc-700">
+                                {produto.imagem_url ? (
                                   <Image
                                     src={produto.imagem_url}
                                     alt={produto.nome}
                                     fill
                                     className="object-cover"
                                   />
-                                  {/* Overlay com ações */}
-                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 
-                                                transition-opacity flex items-center justify-center gap-1">
-                                    <button
-                                      onClick={() => abrirRecorteImagemExistente(produto)}
-                                      className="p-1.5 bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
-                                      title="Recortar imagem"
-                                      aria-label="Recortar imagem"
-                                    >
-                                      <Crop className="w-3.5 h-3.5 text-white" />
-                                    </button>
-                                    <button
-                                      onClick={() => removerImagem(produto.id, produto.tabela || 'produtos')}
-                                      className="p-1.5 bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                                      title="Remover imagem"
-                                      aria-label="Remover imagem"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5 text-white" />
-                                    </button>
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <ImageIcon className="w-6 h-6 text-zinc-400" />
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="w-20 h-20 bg-zinc-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center">
-                                  <ImageIcon className="w-8 h-8 text-zinc-400" />
-                                </div>
-                              )}
-                              {/* Indicador de upload em progresso */}
-                              {enviandoImagem === produto.id && (
-                                <div className="absolute inset-0 bg-black/70 rounded-lg flex items-center justify-center">
-                                  <RefreshCw className="w-5 h-5 text-white animate-spin" />
-                                </div>
+                                )}
+                                {enviandoImagem === produto.id && (
+                                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                                    <RefreshCw className="w-4 h-4 text-white animate-spin" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Info Mobile */}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-zinc-900 dark:text-white text-sm truncate">
+                                {produto.nome}
+                              </h3>
+                              <p className="text-amber-600 font-bold text-lg">
+                                R$ {produto.preco.toFixed(2)}
+                              </p>
+                              {produto.desconto && produto.desconto > 0 && (
+                                <span className="text-xs font-bold text-green-600">-{produto.desconto}% OFF</span>
                               )}
                             </div>
-                            {/* Botão de upload */}
+                            
+                            {/* Toggle Disponível Mobile */}
+                            <div className="flex-shrink-0">
+                              <label className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={produto.disponivel}
+                                  onChange={(e) => atualizarProduto(produto.id, 'disponivel', e.target.checked)}
+                                  className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500"
+                                />
+                              </label>
+                            </div>
+                          </div>
+                          
+                          {/* Botões de ação Mobile - Sempre visíveis */}
+                          <div className="flex gap-2 mt-3 md:hidden">
                             <button
                               onClick={() => iniciarUploadImagem(produto.id, produto.tabela || 'produtos')}
                               disabled={enviandoImagem === produto.id}
-                              className="flex items-center gap-1 px-2 py-1 text-xs font-medium 
+                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium 
                                        bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 
-                                       rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 
-                                       transition-colors disabled:opacity-50"
+                                       rounded-lg active:bg-amber-200 disabled:opacity-50"
                             >
-                              <Camera className="w-3 h-3" />
-                              {produto.imagem_url ? 'Trocar' : 'Adicionar'}
+                              <Camera className="w-4 h-4" />
+                              {produto.imagem_url ? 'Trocar Foto' : 'Adicionar Foto'}
                             </button>
+                            {produto.imagem_url && (
+                              <>
+                                <button
+                                  onClick={() => abrirRecorteImagemExistente(produto)}
+                                  className="px-3 py-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 
+                                           rounded-lg active:bg-blue-200"
+                                  title="Recortar"
+                                >
+                                  <Crop className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => removerImagem(produto.id, produto.tabela || 'produtos')}
+                                  className="px-3 py-2.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 
+                                           rounded-lg active:bg-red-200"
+                                  title="Remover"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
 
-                          {/* Nome */}
-                          <div className="md:col-span-4">
-                            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                              Nome do Produto
-                            </label>
-                            <input
-                              type="text"
-                              value={produto.nome}
-                              onChange={(e) => atualizarProduto(produto.id, 'nome', e.target.value)}
-                              className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
-                                       dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white
-                                       focus:outline-none focus:ring-2 focus:ring-amber-500"
-                            />
-                          </div>
+                          {/* Layout Desktop */}
+                          <div className="hidden md:grid md:grid-cols-12 gap-4">
+                            {/* Imagem Desktop */}
+                            <div className="col-span-2 flex flex-col items-center justify-center gap-2">
+                              <div className="relative group">
+                                {produto.imagem_url ? (
+                                  <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+                                    <Image
+                                      src={produto.imagem_url}
+                                      alt={produto.nome}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 
+                                                  transition-opacity flex items-center justify-center gap-1">
+                                      <button
+                                        onClick={() => abrirRecorteImagemExistente(produto)}
+                                        className="p-2 bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
+                                        title="Recortar imagem"
+                                      >
+                                        <Crop className="w-4 h-4 text-white" />
+                                      </button>
+                                      <button
+                                        onClick={() => removerImagem(produto.id, produto.tabela || 'produtos')}
+                                        className="p-2 bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                                        title="Remover imagem"
+                                      >
+                                        <Trash2 className="w-4 h-4 text-white" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="w-20 h-20 bg-zinc-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center">
+                                    <ImageIcon className="w-8 h-8 text-zinc-400" />
+                                  </div>
+                                )}
+                                {enviandoImagem === produto.id && (
+                                  <div className="absolute inset-0 bg-black/70 rounded-lg flex items-center justify-center">
+                                    <RefreshCw className="w-5 h-5 text-white animate-spin" />
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => iniciarUploadImagem(produto.id, produto.tabela || 'produtos')}
+                                disabled={enviandoImagem === produto.id}
+                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium 
+                                         bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 
+                                         rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 
+                                         transition-colors disabled:opacity-50"
+                              >
+                                <Camera className="w-3 h-3" />
+                                {produto.imagem_url ? 'Trocar' : 'Adicionar'}
+                              </button>
+                            </div>
 
-                          {/* Preço */}
-                          <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                              Preço (R$)
-                            </label>
-                            <div className="relative">
-                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                            {/* Nome Desktop */}
+                            <div className="col-span-4">
+                              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                Nome do Produto
+                              </label>
                               <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                defaultValue={produto.preco}
-                                onBlur={(e) => {
-                                  const valor = e.target.value
-                                  if (valor === '' || valor === null) {
-                                    e.target.value = produto.preco.toString()
-                                    return
-                                  }
-                                  const numero = parseFloat(valor)
-                                  if (!isNaN(numero) && numero >= 0) {
-                                    atualizarProduto(produto.id, 'preco', numero)
-                                  } else {
-                                    e.target.value = produto.preco.toString()
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.currentTarget.blur()
-                                  }
-                                }}
-                                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
-                                         dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white
+                                type="text"
+                                value={produto.nome}
+                                onChange={(e) => atualizarProduto(produto.id, 'nome', e.target.value)}
+                                className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
+                                         dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white text-sm
                                          focus:outline-none focus:ring-2 focus:ring-amber-500"
                               />
                             </div>
-                          </div>
 
-                          {/* Desconto */}
-                          <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                              Desconto (%)
-                            </label>
-                            <div className="relative">
-                              <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="1"
-                                value={produto.desconto || 0}
-                                onChange={(e) => {
+                            {/* Preço Desktop */}
+                            <div className="col-span-2">
+                              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                Preço (R$)
+                              </label>
+                              <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  defaultValue={produto.preco}
+                                  onBlur={(e) => {
+                                    const valor = e.target.value
+                                    if (valor === '' || valor === null) {
+                                      e.target.value = produto.preco.toString()
+                                      return
+                                    }
+                                    const numero = parseFloat(valor)
+                                    if (!isNaN(numero) && numero >= 0) {
+                                      atualizarProduto(produto.id, 'preco', numero)
+                                    } else {
+                                      e.target.value = produto.preco.toString()
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.currentTarget.blur()
+                                    }
+                                  }}
+                                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
+                                           dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white text-sm
+                                           focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Desconto Desktop */}
+                            <div className="col-span-2">
+                              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                Desconto (%)
+                              </label>
+                              <div className="relative">
+                                <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="1"
+                                  value={produto.desconto || 0}
+                                  onChange={(e) => {
                                   const valor = e.target.value
                                   if (valor === '' || valor === null) return // Permite apagar sem erro
                                   const numero = parseFloat(valor)
@@ -691,39 +772,40 @@ export default function ProdutosPage() {
                                   }
                                 }}
                                 className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
-                                         dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white
-                                         focus:outline-none focus:ring-2 focus:ring-amber-500"
-                              />
+                                           dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white text-sm
+                                           focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                />
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Status */}
-                          <div className="md:col-span-2 flex items-end">
-                            {salvando === produto.id ? (
-                              <div className="flex items-center gap-2 text-amber-600 text-sm">
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                                Salvando...
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-1 w-full">
-                                {produto.desconto && produto.desconto > 0 && (
-                                  <span className="text-xs font-bold text-green-600 dark:text-green-400">
-                                    {produto.desconto}% OFF
-                                  </span>
-                                )}
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={produto.disponivel}
-                                    onChange={(e) => atualizarProduto(produto.id, 'disponivel', e.target.checked)}
-                                    className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
-                                  />
-                                  <span className="text-sm text-zinc-700 dark:text-zinc-300">
-                                    Disponível
-                                  </span>
-                                </label>
-                              </div>
-                            )}
+                            {/* Status Desktop */}
+                            <div className="col-span-2 flex items-end">
+                              {salvando === produto.id ? (
+                                <div className="flex items-center gap-2 text-amber-600 text-sm">
+                                  <RefreshCw className="w-4 h-4 animate-spin" />
+                                  Salvando...
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-1 w-full">
+                                  {produto.desconto && produto.desconto > 0 && (
+                                    <span className="text-xs font-bold text-green-600 dark:text-green-400">
+                                      {produto.desconto}% OFF
+                                    </span>
+                                  )}
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={produto.disponivel}
+                                      onChange={(e) => atualizarProduto(produto.id, 'disponivel', e.target.checked)}
+                                      className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
+                                    />
+                                    <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                                      Disponível
+                                    </span>
+                                  </label>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
