@@ -80,7 +80,7 @@ export default function ProdutosPage() {
     nome: '',
     descricao: '',
     preco: '',
-    categoria: 'Hambúrgueres',
+    categoria: 'Linha Artesanal',
   })
   const [imagemNovoProduto, setImagemNovoProduto] = useState<string | null>(null)
   const [blobNovoProduto, setBlobNovoProduto] = useState<Blob | null>(null)
@@ -377,7 +377,7 @@ export default function ProdutosPage() {
 
   // Funções para o novo produto
   const abrirModalNovoProduto = () => {
-    setNovoProduto({ nome: '', descricao: '', preco: '', categoria: 'Hambúrgueres' })
+    setNovoProduto({ nome: '', descricao: '', preco: '', categoria: 'Linha Artesanal' })
     setImagemNovoProduto(null)
     setBlobNovoProduto(null)
     setModalNovoProduto(true)
@@ -428,16 +428,28 @@ export default function ProdutosPage() {
 
     setSalvandoNovoProduto(true)
     try {
-      // Primeiro, cria o produto
+      const isBebida = novoProduto.categoria === 'Bebidas'
+      const tabela = isBebida ? 'bebidas' : 'produtos'
+      
+      // Dados para inserção
+      const dadosInsercao = isBebida 
+        ? {
+            nome: novoProduto.nome,
+            tamanho: novoProduto.descricao || null,
+            preco: parseFloat(novoProduto.preco),
+            disponivel: true,
+          }
+        : {
+            nome: novoProduto.nome,
+            descricao: novoProduto.descricao || null,
+            preco: parseFloat(novoProduto.preco),
+            categoria: novoProduto.categoria,
+            disponivel: true,
+          }
+
       const { data: produtoCriado, error: erroCriacao } = await supabase
-        .from('produtos')
-        .insert({
-          nome: novoProduto.nome,
-          descricao: novoProduto.descricao || null,
-          preco: parseFloat(novoProduto.preco),
-          categoria: novoProduto.categoria,
-          disponivel: true,
-        })
+        .from(tabela)
+        .insert(dadosInsercao)
         .select()
         .single()
 
@@ -445,7 +457,7 @@ export default function ProdutosPage() {
 
       // Se tem imagem, faz upload
       if (blobNovoProduto && produtoCriado) {
-        const nomeArquivo = `produtos/${produtoCriado.id}_${Date.now()}.jpg`
+        const nomeArquivo = `${tabela}/${produtoCriado.id}_${Date.now()}.jpg`
         
         const { error: uploadError } = await supabase.storage
           .from('imagens')
@@ -460,7 +472,7 @@ export default function ProdutosPage() {
             .getPublicUrl(nomeArquivo)
 
           await supabase
-            .from('produtos')
+            .from(tabela)
             .update({ imagem_url: urlData.publicUrl })
             .eq('id', produtoCriado.id)
         }
@@ -469,8 +481,8 @@ export default function ProdutosPage() {
       setModalNotificacao({
         aberto: true,
         tipo: 'sucesso',
-        titulo: 'Produto Criado',
-        mensagem: 'O produto foi cadastrado com sucesso!'
+        titulo: isBebida ? 'Bebida Criada' : 'Produto Criado',
+        mensagem: `${isBebida ? 'A bebida' : 'O produto'} foi cadastrado com sucesso!`
       })
 
       setModalNovoProduto(false)
@@ -489,7 +501,7 @@ export default function ProdutosPage() {
   }
 
   const categorias = Array.from(new Set(produtos.map(p => p.categoria)))
-  const categoriasDisponiveis = ['Hambúrgueres', 'Combos', 'Porções', 'Sobremesas']
+  const categoriasDisponiveis = ['Linha Artesanal', 'Linha Industrial', 'Bebidas']
 
   return (
     <ProtectedRoute>
@@ -899,72 +911,84 @@ export default function ProdutosPage() {
                   <p className="text-xs text-zinc-500">Máximo 1MB após compressão</p>
                 </div>
 
+                {/* Categoria primeiro para mudar labels dinamicamente */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Categoria *
+                  </label>
+                  <select
+                    value={novoProduto.categoria}
+                    onChange={(e) => setNovoProduto({ ...novoProduto, categoria: e.target.value })}
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
+                             bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
+                             focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  >
+                    {categoriasDisponiveis.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Nome */}
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Nome do Produto *
+                    {novoProduto.categoria === 'Bebidas' ? 'Nome da Bebida' : 'Nome do Produto'} *
                   </label>
                   <input
                     type="text"
                     value={novoProduto.nome}
                     onChange={(e) => setNovoProduto({ ...novoProduto, nome: e.target.value })}
-                    placeholder="Ex: X-Burguer Especial"
+                    placeholder={novoProduto.categoria === 'Bebidas' ? 'Ex: Coca-Cola' : 'Ex: X-Burguer Especial'}
                     className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
                              bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
                              focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
 
-                {/* Descrição */}
+                {/* Descrição / Tamanho */}
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Descrição
+                    {novoProduto.categoria === 'Bebidas' ? 'Tamanho' : 'Descrição'}
                   </label>
-                  <textarea
-                    value={novoProduto.descricao}
-                    onChange={(e) => setNovoProduto({ ...novoProduto, descricao: e.target.value })}
-                    placeholder="Descreva os ingredientes..."
-                    rows={2}
-                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
-                             bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
-                             focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
-                  />
-                </div>
-
-                {/* Preço e Categoria */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Preço (R$) *
-                    </label>
+                  {novoProduto.categoria === 'Bebidas' ? (
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={novoProduto.preco}
-                      onChange={(e) => setNovoProduto({ ...novoProduto, preco: e.target.value })}
-                      placeholder="0.00"
+                      type="text"
+                      value={novoProduto.descricao}
+                      onChange={(e) => setNovoProduto({ ...novoProduto, descricao: e.target.value })}
+                      placeholder="Ex: 350ml, 600ml, 2L"
                       className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
                                bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
                                focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      Categoria
-                    </label>
-                    <select
-                      value={novoProduto.categoria}
-                      onChange={(e) => setNovoProduto({ ...novoProduto, categoria: e.target.value })}
+                  ) : (
+                    <textarea
+                      value={novoProduto.descricao}
+                      onChange={(e) => setNovoProduto({ ...novoProduto, descricao: e.target.value })}
+                      placeholder="Descreva os ingredientes..."
+                      rows={2}
                       className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
                                bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
-                               focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      {categoriasDisponiveis.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
+                               focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                    />
+                  )}
+                </div>
+
+                {/* Preço */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    Preço (R$) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={novoProduto.preco}
+                    onChange={(e) => setNovoProduto({ ...novoProduto, preco: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg
+                             bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white
+                             focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
                 </div>
 
                 {/* Botões */}

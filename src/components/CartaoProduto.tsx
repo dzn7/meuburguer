@@ -20,8 +20,8 @@ export default function CartaoProduto({ produto, onAdicionar }: CartaoProdutoPro
     <div className="bg-white dark:bg-zinc-900 rounded-xl overflow-hidden shadow-md hover:shadow-xl 
                     transition-all duration-300 flex flex-col h-full border border-zinc-100 dark:border-zinc-800
                     group">
-      {/* Imagem - Proporção 4:3 para ser mais compacta */}
-      <div className="relative w-full aspect-[4/3] overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+      {/* Imagem - Proporção 3:4 para ser mais alta */}
+      <div className="relative w-full aspect-[3/4] overflow-hidden bg-zinc-100 dark:bg-zinc-800">
         {/* Badges */}
         <div className="absolute top-2 left-2 right-2 z-20 flex justify-between">
           {produto.desconto && produto.desconto > 0 && (
