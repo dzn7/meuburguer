@@ -1,5 +1,5 @@
 // Service Worker EXCLUSIVO para Admin Dashboard
-const CACHE_VERSION = 'admin-v1.1.3'
+const CACHE_VERSION = 'admin-v1.2.0'
 const CACHE_NAME = `meu-burguer-admin-${CACHE_VERSION}`
 
 // Cache mínimo - apenas essenciais

@@ -2,8 +2,11 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { Plus, Star } from 'lucide-react'
+import { Plus, Star, ImageIcon } from 'lucide-react'
 import { Produto } from '@/lib/supabase'
+
+// Imagem padrão quando o produto não tem imagem
+const IMAGEM_PADRAO = '/placeholder-produto.png'
 
 type CartaoProdutoProps = {
   produto: Produto
@@ -12,7 +15,12 @@ type CartaoProdutoProps = {
 
 export default function CartaoProduto({ produto, onAdicionar }: CartaoProdutoProps) {
   const [imagemCarregada, setImagemCarregada] = useState(false)
+  const [erroImagem, setErroImagem] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  
+  // Verifica se tem uma URL de imagem válida
+  const temImagemValida = produto.imagem_url && produto.imagem_url.trim() !== '' && !erroImagem
+  const urlImagem = temImagemValida ? produto.imagem_url : IMAGEM_PADRAO
 
   return (
     <div 
@@ -93,26 +101,35 @@ export default function CartaoProduto({ produto, onAdicionar }: CartaoProdutoPro
                             filter-burger-image
                             group-hover:brightness-110 group-hover:contrast-105 
                             transition-all duration-700">
-              <Image
-                src={produto.imagem_url}
-                alt={produto.nome}
-                fill
-                priority={false}
-                className={`object-cover transition-all duration-700 ease-out
-                          ${imagemCarregada ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
-                          group-hover:scale-[1.08]
-                          drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)]
-                          group-hover:drop-shadow-[0_30px_70px_rgba(0,0,0,0.4)]`}
-                onLoad={() => setImagemCarregada(true)}
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                style={{
-                  objectPosition: 'center 45%',
-                  filter: isHovered 
-                    ? 'brightness(1.08) contrast(1.06) saturate(1.12)' 
-                    : 'brightness(1.02) contrast(1.02) saturate(1.05)',
-                  transition: 'filter 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              />
+              {temImagemValida ? (
+                <Image
+                  src={urlImagem}
+                  alt={produto.nome}
+                  fill
+                  priority={false}
+                  className={`object-cover transition-all duration-700 ease-out
+                            ${imagemCarregada ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
+                            group-hover:scale-[1.08]
+                            drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)]
+                            group-hover:drop-shadow-[0_30px_70px_rgba(0,0,0,0.4)]`}
+                  onLoad={() => setImagemCarregada(true)}
+                  onError={() => setErroImagem(true)}
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  style={{
+                    objectPosition: 'center 45%',
+                    filter: isHovered 
+                      ? 'brightness(1.08) contrast(1.06) saturate(1.12)' 
+                      : 'brightness(1.02) contrast(1.02) saturate(1.05)',
+                    transition: 'filter 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center 
+                              bg-gradient-to-br from-zinc-100 to-zinc-200 
+                              dark:from-zinc-800 dark:to-zinc-900">
+                  <ImageIcon className="w-16 h-16 text-zinc-400 dark:text-zinc-600" />
+                </div>
+              )}
             </div>
             
             {/* Overlay de brilho radial dinâmico */}

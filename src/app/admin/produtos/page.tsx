@@ -1,13 +1,25 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Save, RefreshCw, Package, DollarSign, Percent } from 'lucide-react'
+import { 
+  RefreshCw, 
+  Package, 
+  DollarSign, 
+  Percent, 
+  Camera, 
+  Crop, 
+  Upload,
+  Trash2,
+  ImageIcon
+} from 'lucide-react'
 import ProtectedRoute from '@/components/admin/ProtectedRoute'
 import AdminLayout from '@/components/admin/AdminLayout'
 import { supabase } from '@/lib/supabase'
 import Image from 'next/image'
 import ModalNotificacao from '@/components/ModalNotificacao'
+import ModalRecorteImagem from '@/components/admin/ModalRecorteImagem'
+import { validarArquivoImagem, arquivoParaUrl } from '@/lib/recorteImagem'
 
 type Produto = {
   id: string
@@ -20,6 +32,13 @@ type Produto = {
   imagem_url?: string
   disponivel: boolean
   tabela?: string
+}
+
+type EstadoRecorte = {
+  aberto: boolean
+  imagemUrl: string
+  produtoId: string | null
+  tabela: string
 }
 
 export default function ProdutosPage() {
@@ -37,6 +56,20 @@ export default function ProdutosPage() {
     titulo: '',
     mensagem: ''
   })
+
+  // Estados para o recorte de imagem
+  const [estadoRecorte, setEstadoRecorte] = useState<EstadoRecorte>({
+    aberto: false,
+    imagemUrl: '',
+    produtoId: null,
+    tabela: 'produtos'
+  })
+  const [enviandoImagem, setEnviandoImagem] = useState<string | null>(null)
+  const inputFileRef = useRef<HTMLInputElement>(null)
+  const [produtoSelecionadoParaUpload, setProdutoSelecionadoParaUpload] = useState<{
+    id: string
+    tabela: string
+  } | null>(null)
 
   useEffect(() => {
     carregarProdutos()
@@ -166,6 +199,164 @@ export default function ProdutosPage() {
     }
   }
 
+  // Função para iniciar o processo de upload de imagem
+  const iniciarUploadImagem = useCallback((produtoId: string, tabela: string) => {
+    setProdutoSelecionadoParaUpload({ id: produtoId, tabela })
+    inputFileRef.current?.click()
+  }, [])
+
+  // Função para processar o arquivo selecionado
+  const aoSelecionarArquivo = useCallback(async (evento: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivo = evento.target.files?.[0]
+    if (!arquivo || !produtoSelecionadoParaUpload) return
+
+    // Valida o arquivo
+    const validacao = validarArquivoImagem(arquivo)
+    if (!validacao.valido) {
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Arquivo Inválido',
+        mensagem: validacao.erro || 'O arquivo selecionado não é válido.'
+      })
+      evento.target.value = ''
+      return
+    }
+
+    try {
+      const urlImagem = await arquivoParaUrl(arquivo)
+      setEstadoRecorte({
+        aberto: true,
+        imagemUrl: urlImagem,
+        produtoId: produtoSelecionadoParaUpload.id,
+        tabela: produtoSelecionadoParaUpload.tabela
+      })
+    } catch (erro) {
+      console.error('Erro ao ler arquivo:', erro)
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Erro ao Ler Arquivo',
+        mensagem: 'Não foi possível ler o arquivo selecionado.'
+      })
+    }
+
+    // Limpa o input para permitir selecionar o mesmo arquivo novamente
+    evento.target.value = ''
+  }, [produtoSelecionadoParaUpload])
+
+  // Função para abrir o recorte de uma imagem existente
+  const abrirRecorteImagemExistente = useCallback((produto: Produto) => {
+    if (!produto.imagem_url) return
+
+    setEstadoRecorte({
+      aberto: true,
+      imagemUrl: produto.imagem_url,
+      produtoId: produto.id,
+      tabela: produto.tabela || 'produtos'
+    })
+  }, [])
+
+  // Função para fazer upload da imagem recortada para o Supabase Storage
+  const enviarImagemRecortada = useCallback(async (base64: string, blob: Blob) => {
+    if (!estadoRecorte.produtoId) return
+
+    setEnviandoImagem(estadoRecorte.produtoId)
+    setEstadoRecorte(prev => ({ ...prev, aberto: false }))
+
+    try {
+      // Gera um nome único para o arquivo
+      const nomeArquivo = `${estadoRecorte.tabela}/${estadoRecorte.produtoId}_${Date.now()}.jpg`
+
+      // Faz upload para o Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('imagens')
+        .upload(nomeArquivo, blob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        })
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      // Obtém a URL pública da imagem
+      const { data: urlData } = supabase.storage
+        .from('imagens')
+        .getPublicUrl(nomeArquivo)
+
+      const novaUrlImagem = urlData.publicUrl
+
+      // Atualiza o registro no banco de dados
+      const { error: updateError } = await supabase
+        .from(estadoRecorte.tabela)
+        .update({ imagem_url: novaUrlImagem })
+        .eq('id', estadoRecorte.produtoId)
+
+      if (updateError) {
+        throw updateError
+      }
+
+      // Atualiza o estado local
+      setProdutos(prev => prev.map(p => 
+        p.id === estadoRecorte.produtoId 
+          ? { ...p, imagem_url: novaUrlImagem }
+          : p
+      ))
+
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'sucesso',
+        titulo: 'Imagem Atualizada',
+        mensagem: 'A imagem do produto foi atualizada com sucesso!'
+      })
+    } catch (erro) {
+      console.error('Erro ao enviar imagem:', erro)
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Erro ao Enviar Imagem',
+        mensagem: 'Não foi possível enviar a imagem. Verifique se o bucket "imagens" existe no Supabase Storage.'
+      })
+    } finally {
+      setEnviandoImagem(null)
+    }
+  }, [estadoRecorte])
+
+  // Função para remover a imagem de um produto
+  const removerImagem = useCallback(async (produtoId: string, tabela: string) => {
+    setSalvando(produtoId)
+    try {
+      const { error } = await supabase
+        .from(tabela)
+        .update({ imagem_url: null })
+        .eq('id', produtoId)
+
+      if (error) throw error
+
+      setProdutos(prev => prev.map(p => 
+        p.id === produtoId ? { ...p, imagem_url: undefined } : p
+      ))
+
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'sucesso',
+        titulo: 'Imagem Removida',
+        mensagem: 'A imagem foi removida com sucesso.'
+      })
+    } catch (erro) {
+      console.error('Erro ao remover imagem:', erro)
+      setModalNotificacao({
+        aberto: true,
+        tipo: 'erro',
+        titulo: 'Erro ao Remover',
+        mensagem: 'Não foi possível remover a imagem.'
+      })
+    } finally {
+      setSalvando(null)
+    }
+  }, [])
+
   const categorias = Array.from(new Set(produtos.map(p => p.categoria)))
 
   return (
@@ -220,22 +411,62 @@ export default function ProdutosPage() {
                           className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 bg-zinc-50 dark:bg-zinc-800 
                                    rounded-lg border border-zinc-200 dark:border-zinc-700"
                         >
-                          {/* Imagem */}
-                          <div className="md:col-span-2 flex items-center justify-center">
-                            {produto.imagem_url ? (
-                              <div className="relative w-20 h-20 rounded-lg overflow-hidden">
-                                <Image
-                                  src={produto.imagem_url}
-                                  alt={produto.nome}
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-20 h-20 bg-zinc-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center">
-                                <Package className="w-8 h-8 text-zinc-400" />
-                              </div>
-                            )}
+                          {/* Imagem com controles de edição */}
+                          <div className="md:col-span-2 flex flex-col items-center justify-center gap-2">
+                            <div className="relative group">
+                              {produto.imagem_url ? (
+                                <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+                                  <Image
+                                    src={produto.imagem_url}
+                                    alt={produto.nome}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                  {/* Overlay com ações */}
+                                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 
+                                                transition-opacity flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={() => abrirRecorteImagemExistente(produto)}
+                                      className="p-1.5 bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
+                                      title="Recortar imagem"
+                                      aria-label="Recortar imagem"
+                                    >
+                                      <Crop className="w-3.5 h-3.5 text-white" />
+                                    </button>
+                                    <button
+                                      onClick={() => removerImagem(produto.id, produto.tabela || 'produtos')}
+                                      className="p-1.5 bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                                      title="Remover imagem"
+                                      aria-label="Remover imagem"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 text-white" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="w-20 h-20 bg-zinc-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center">
+                                  <ImageIcon className="w-8 h-8 text-zinc-400" />
+                                </div>
+                              )}
+                              {/* Indicador de upload em progresso */}
+                              {enviandoImagem === produto.id && (
+                                <div className="absolute inset-0 bg-black/70 rounded-lg flex items-center justify-center">
+                                  <RefreshCw className="w-5 h-5 text-white animate-spin" />
+                                </div>
+                              )}
+                            </div>
+                            {/* Botão de upload */}
+                            <button
+                              onClick={() => iniciarUploadImagem(produto.id, produto.tabela || 'produtos')}
+                              disabled={enviandoImagem === produto.id}
+                              className="flex items-center gap-1 px-2 py-1 text-xs font-medium 
+                                       bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 
+                                       rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 
+                                       transition-colors disabled:opacity-50"
+                            >
+                              <Camera className="w-3 h-3" />
+                              {produto.imagem_url ? 'Trocar' : 'Adicionar'}
+                            </button>
                           </div>
 
                           {/* Nome */}
@@ -360,6 +591,26 @@ export default function ProdutosPage() {
             </div>
           )}
         </div>
+
+        {/* Input oculto para seleção de arquivo */}
+        <input
+          ref={inputFileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          onChange={aoSelecionarArquivo}
+          className="hidden"
+          aria-hidden="true"
+        />
+
+        {/* Modal de recorte de imagem */}
+        <ModalRecorteImagem
+          aberto={estadoRecorte.aberto}
+          imagemUrl={estadoRecorte.imagemUrl}
+          onFechar={() => setEstadoRecorte(prev => ({ ...prev, aberto: false }))}
+          onConfirmar={enviarImagemRecortada}
+          proporcaoInicial={1}
+          titulo="Ajustar Imagem do Produto"
+        />
 
         <ModalNotificacao
           aberto={modalNotificacao.aberto}
