@@ -40,7 +40,6 @@ type Adicional = {
 
 export default function NovoPedidoPage() {
   const [nomeCliente, setNomeCliente] = useState('')
-  const [telefone, setTelefone] = useState('')
   const [endereco, setEndereco] = useState('')
   const [tipoEntrega, setTipoEntrega] = useState('entrega')
   const [formaPagamento, setFormaPagamento] = useState('')
@@ -189,8 +188,8 @@ export default function NovoPedidoPage() {
   }
 
   const salvarPedido = async () => {
-    if (!nomeCliente || !telefone || !formaPagamento || produtosSelecionados.length === 0) {
-      alert('Preencha todos os campos obrigatórios e adicione pelo menos um produto')
+    if (!nomeCliente || !formaPagamento || produtosSelecionados.length === 0) {
+      alert('Preencha o nome do cliente, forma de pagamento e adicione pelo menos um produto')
       return
     }
 
@@ -208,7 +207,6 @@ export default function NovoPedidoPage() {
         .from('pedidos')
         .insert({
           nome_cliente: nomeCliente,
-          telefone,
           endereco: endereco || null,
           tipo_entrega: tipoEntrega,
           forma_pagamento: formaPagamento,
@@ -314,21 +312,6 @@ export default function NovoPedidoPage() {
                       value={nomeCliente}
                       onChange={(e) => setNomeCliente(e.target.value)}
                       placeholder="Digite o nome"
-                      className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 
-                               dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white
-                               placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500 
-                               focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                      Telefone *
-                    </label>
-                    <input
-                      type="tel"
-                      value={telefone}
-                      onChange={(e) => setTelefone(e.target.value)}
-                      placeholder="(00) 00000-0000"
                       className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 
                                dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white
                                placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500 
@@ -661,7 +644,7 @@ export default function NovoPedidoPage() {
                 </div>
                 <button
                   onClick={salvarPedido}
-                  disabled={loading || produtosSelecionados.length === 0 || !nomeCliente || !telefone}
+                  disabled={loading || produtosSelecionados.length === 0 || !nomeCliente || !formaPagamento}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 
                            hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors
                            disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-600"

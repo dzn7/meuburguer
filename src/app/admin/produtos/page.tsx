@@ -14,7 +14,10 @@ import {
   ImageIcon,
   Plus,
   X,
-  Save
+  Save,
+  ChevronDown,
+  ChevronUp,
+  Tag
 } from 'lucide-react'
 import ProtectedRoute from '@/components/admin/ProtectedRoute'
 import AdminLayout from '@/components/admin/AdminLayout'
@@ -88,6 +91,10 @@ export default function ProdutosPage() {
   const inputFileNovoProdutoRef = useRef<HTMLInputElement>(null)
   const [recorteNovoProduto, setRecorteNovoProduto] = useState(false)
   const [imagemParaRecorte, setImagemParaRecorte] = useState('')
+  const [produtoExpandido, setProdutoExpandido] = useState<string | null>(null)
+
+  // Categorias disponíveis para produtos (não bebidas)
+  const categoriasParaEdicao = ['Linha Artesanal', 'Linha Industrial', 'Clássicos', 'Premium', 'Especialidade da Casa', 'Especiais da Casa']
 
   useEffect(() => {
     carregarProdutos()
@@ -564,98 +571,233 @@ export default function ProdutosPage() {
                           key={produto.id}
                           className="bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3 md:p-4"
                         >
-                          {/* Layout Mobile: Imagem + Info lado a lado */}
-                          <div className="flex gap-3 md:hidden">
-                            {/* Imagem Mobile */}
-                            <div className="flex-shrink-0">
-                              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-zinc-200 dark:bg-zinc-700">
-                                {produto.imagem_url ? (
-                                  <Image
-                                    src={produto.imagem_url}
-                                    alt={produto.nome}
-                                    fill
-                                    className="object-cover"
+                          {/* Layout Mobile/Tablet: Card compacto e expansível */}
+                          <div className="lg:hidden">
+                            {/* Cabeçalho do card - sempre visível */}
+                            <div 
+                              className="flex gap-3 cursor-pointer"
+                              onClick={() => setProdutoExpandido(produtoExpandido === produto.id ? null : produto.id)}
+                            >
+                              {/* Imagem Mobile */}
+                              <div className="flex-shrink-0">
+                                <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-zinc-200 dark:bg-zinc-700">
+                                  {produto.imagem_url ? (
+                                    <Image
+                                      src={produto.imagem_url}
+                                      alt={produto.nome}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <ImageIcon className="w-6 h-6 text-zinc-400" />
+                                    </div>
+                                  )}
+                                  {enviandoImagem === produto.id && (
+                                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                                      <RefreshCw className="w-4 h-4 text-white animate-spin" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Info Mobile */}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-zinc-900 dark:text-white text-sm truncate">
+                                  {produto.nome}
+                                </h3>
+                                <p className="text-amber-600 font-bold text-lg">
+                                  R$ {produto.preco.toFixed(2)}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  {produto.desconto && produto.desconto > 0 && (
+                                    <span className="text-xs font-bold text-green-600">-{produto.desconto}% OFF</span>
+                                  )}
+                                  {produto.tabela !== 'bebidas' && (
+                                    <span className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                                      <Tag className="w-3 h-3" />
+                                      {produto.categoria}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Toggle e Expandir */}
+                              <div className="flex-shrink-0 flex flex-col items-center gap-2">
+                                <label className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={produto.disponivel}
+                                    onChange={(e) => atualizarProduto(produto.id, 'disponivel', e.target.checked)}
+                                    className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500"
                                   />
+                                </label>
+                                {produtoExpandido === produto.id ? (
+                                  <ChevronUp className="w-5 h-5 text-zinc-400" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <ImageIcon className="w-6 h-6 text-zinc-400" />
-                                  </div>
-                                )}
-                                {enviandoImagem === produto.id && (
-                                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                                    <RefreshCw className="w-4 h-4 text-white animate-spin" />
-                                  </div>
+                                  <ChevronDown className="w-5 h-5 text-zinc-400" />
                                 )}
                               </div>
                             </div>
                             
-                            {/* Info Mobile */}
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-zinc-900 dark:text-white text-sm truncate">
-                                {produto.nome}
-                              </h3>
-                              <p className="text-amber-600 font-bold text-lg">
-                                R$ {produto.preco.toFixed(2)}
-                              </p>
-                              {produto.desconto && produto.desconto > 0 && (
-                                <span className="text-xs font-bold text-green-600">-{produto.desconto}% OFF</span>
-                              )}
-                            </div>
-                            
-                            {/* Toggle Disponível Mobile */}
-                            <div className="flex-shrink-0">
-                              <label className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  checked={produto.disponivel}
-                                  onChange={(e) => atualizarProduto(produto.id, 'disponivel', e.target.checked)}
-                                  className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500"
-                                />
-                              </label>
-                            </div>
-                          </div>
-                          
-                          {/* Botões de ação Mobile - Sempre visíveis */}
-                          <div className="flex gap-2 mt-3 md:hidden">
-                            <button
-                              onClick={() => iniciarUploadImagem(produto.id, produto.tabela || 'produtos')}
-                              disabled={enviandoImagem === produto.id}
-                              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium 
-                                       bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 
-                                       rounded-lg active:bg-amber-200 disabled:opacity-50"
-                            >
-                              <Camera className="w-4 h-4" />
-                              {produto.imagem_url ? 'Trocar Foto' : 'Adicionar Foto'}
-                            </button>
-                            {produto.imagem_url && (
-                              <>
-                                <button
-                                  onClick={() => abrirRecorteImagemExistente(produto)}
-                                  className="px-3 py-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 
-                                           rounded-lg active:bg-blue-200"
-                                  title="Recortar"
-                                >
-                                  <Crop className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => removerImagem(produto.id, produto.tabela || 'produtos')}
-                                  className="px-3 py-2.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 
-                                           rounded-lg active:bg-red-200"
-                                  title="Remover"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
+                            {/* Conteúdo expandido - campos de edição */}
+                            {produtoExpandido === produto.id && (
+                              <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700 space-y-3">
+                                {/* Nome */}
+                                <div>
+                                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                    Nome do Produto
+                                  </label>
+                                  <input
+                                    type="text"
+                                    defaultValue={produto.nome}
+                                    onBlur={(e) => {
+                                      if (e.target.value !== produto.nome) {
+                                        atualizarProduto(produto.id, 'nome', e.target.value)
+                                      }
+                                    }}
+                                    className="w-full px-3 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 
+                                             dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white text-sm
+                                             focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                  />
+                                </div>
+
+                                {/* Preço e Desconto lado a lado */}
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                      Preço (R$)
+                                    </label>
+                                    <div className="relative">
+                                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        defaultValue={produto.preco}
+                                        onBlur={(e) => {
+                                          const valor = e.target.value
+                                          if (valor === '' || valor === null) {
+                                            e.target.value = produto.preco.toString()
+                                            return
+                                          }
+                                          const numero = parseFloat(valor)
+                                          if (!isNaN(numero) && numero >= 0) {
+                                            atualizarProduto(produto.id, 'preco', numero)
+                                          } else {
+                                            e.target.value = produto.preco.toString()
+                                          }
+                                        }}
+                                        className="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 
+                                                 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white text-sm
+                                                 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                      Desconto (%)
+                                    </label>
+                                    <div className="relative">
+                                      <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        value={produto.desconto || 0}
+                                        onChange={(e) => {
+                                          const valor = e.target.value
+                                          if (valor === '' || valor === null) return
+                                          const numero = parseFloat(valor)
+                                          if (!isNaN(numero) && numero >= 0 && numero <= 100) {
+                                            aplicarDesconto(produto.id, numero)
+                                          }
+                                        }}
+                                        onBlur={(e) => {
+                                          if (e.target.value === '' || e.target.value === null) {
+                                            aplicarDesconto(produto.id, 0)
+                                          }
+                                        }}
+                                        className="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 
+                                                 dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white text-sm
+                                                 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Categoria - apenas para produtos (não bebidas) */}
+                                {produto.tabela !== 'bebidas' && (
+                                  <div>
+                                    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                      Categoria
+                                    </label>
+                                    <select
+                                      value={produto.categoria}
+                                      onChange={(e) => atualizarProduto(produto.id, 'categoria', e.target.value)}
+                                      className="w-full px-3 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-300 
+                                               dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white text-sm
+                                               focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                                    >
+                                      {categoriasParaEdicao.map((cat) => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+
+                                {/* Botões de ação da imagem */}
+                                <div className="flex gap-2 pt-2">
+                                  <button
+                                    onClick={() => iniciarUploadImagem(produto.id, produto.tabela || 'produtos')}
+                                    disabled={enviandoImagem === produto.id}
+                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium 
+                                             bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 
+                                             rounded-lg active:bg-amber-200 disabled:opacity-50"
+                                  >
+                                    <Camera className="w-4 h-4" />
+                                    {produto.imagem_url ? 'Trocar Foto' : 'Adicionar Foto'}
+                                  </button>
+                                  {produto.imagem_url && (
+                                    <>
+                                      <button
+                                        onClick={() => abrirRecorteImagemExistente(produto)}
+                                        className="px-3 py-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 
+                                                 rounded-lg active:bg-blue-200"
+                                        title="Recortar"
+                                      >
+                                        <Crop className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => removerImagem(produto.id, produto.tabela || 'produtos')}
+                                        className="px-3 py-2.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 
+                                                 rounded-lg active:bg-red-200"
+                                        title="Remover"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+
+                                {salvando === produto.id && (
+                                  <div className="flex items-center justify-center gap-2 text-amber-600 text-sm py-2">
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    Salvando...
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
 
-                          {/* Layout Desktop */}
-                          <div className="hidden md:grid md:grid-cols-12 gap-4">
+                          {/* Layout Desktop - apenas em telas grandes */}
+                          <div className="hidden lg:grid lg:grid-cols-12 gap-3">
                             {/* Imagem Desktop */}
-                            <div className="col-span-2 flex flex-col items-center justify-center gap-2">
+                            <div className="col-span-1 flex flex-col items-center justify-center gap-2">
                               <div className="relative group">
                                 {produto.imagem_url ? (
-                                  <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+                                  <div className="relative w-16 h-16 rounded-lg overflow-hidden">
                                     <Image
                                       src={produto.imagem_url}
                                       alt={produto.nome}
@@ -681,31 +823,31 @@ export default function ProdutosPage() {
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="w-20 h-20 bg-zinc-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center">
-                                    <ImageIcon className="w-8 h-8 text-zinc-400" />
+                                  <div className="w-16 h-16 bg-zinc-200 dark:bg-zinc-700 rounded-lg flex items-center justify-center">
+                                    <ImageIcon className="w-6 h-6 text-zinc-400" />
                                   </div>
                                 )}
                                 {enviandoImagem === produto.id && (
                                   <div className="absolute inset-0 bg-black/70 rounded-lg flex items-center justify-center">
-                                    <RefreshCw className="w-5 h-5 text-white animate-spin" />
+                                    <RefreshCw className="w-4 h-4 text-white animate-spin" />
                                   </div>
                                 )}
                               </div>
                               <button
                                 onClick={() => iniciarUploadImagem(produto.id, produto.tabela || 'produtos')}
                                 disabled={enviandoImagem === produto.id}
-                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium 
+                                className="flex items-center gap-1 px-2 py-1 text-xs font-medium 
                                          bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 
                                          rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 
                                          transition-colors disabled:opacity-50"
                               >
                                 <Camera className="w-3 h-3" />
-                                {produto.imagem_url ? 'Trocar' : 'Adicionar'}
+                                Trocar
                               </button>
                             </div>
 
                             {/* Nome Desktop */}
-                            <div className="col-span-4">
+                            <div className="col-span-3">
                               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
                                 Nome do Produto
                               </label>
@@ -757,9 +899,9 @@ export default function ProdutosPage() {
                             </div>
 
                             {/* Desconto Desktop */}
-                            <div className="col-span-2">
+                            <div className="col-span-1">
                               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                                Desconto (%)
+                                Desconto
                               </label>
                               <div className="relative">
                                 <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -771,23 +913,51 @@ export default function ProdutosPage() {
                                   value={produto.desconto || 0}
                                   onChange={(e) => {
                                   const valor = e.target.value
-                                  if (valor === '' || valor === null) return // Permite apagar sem erro
+                                  if (valor === '' || valor === null) return
                                   const numero = parseFloat(valor)
                                   if (!isNaN(numero) && numero >= 0 && numero <= 100) {
                                     aplicarDesconto(produto.id, numero)
                                   }
                                 }}
                                 onBlur={(e) => {
-                                  // Ao sair do campo, se estiver vazio, define como 0
                                   if (e.target.value === '' || e.target.value === null) {
                                     aplicarDesconto(produto.id, 0)
                                   }
                                 }}
-                                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
+                                className="w-full pl-9 pr-2 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
                                            dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white text-sm
                                            focus:outline-none focus:ring-2 focus:ring-amber-500"
                                 />
                               </div>
+                            </div>
+
+                            {/* Categoria Desktop - apenas para produtos */}
+                            <div className="col-span-3">
+                              {produto.tabela !== 'bebidas' ? (
+                                <>
+                                  <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                    Categoria
+                                  </label>
+                                  <select
+                                    value={produto.categoria}
+                                    onChange={(e) => atualizarProduto(produto.id, 'categoria', e.target.value)}
+                                    className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-300 
+                                             dark:border-zinc-600 rounded-lg text-zinc-900 dark:text-white text-sm
+                                             focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                                  >
+                                    {categoriasParaEdicao.map((cat) => (
+                                      <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                  </select>
+                                </>
+                              ) : (
+                                <div className="flex items-end h-full pb-1">
+                                  <span className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                                    <Tag className="w-3 h-3" />
+                                    Bebida
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
                             {/* Status Desktop */}

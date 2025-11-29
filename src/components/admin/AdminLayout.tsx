@@ -14,8 +14,9 @@ import {
   Moon, 
   Sun, 
   Menu, 
-  X 
+  X
 } from 'lucide-react'
+import IconeMesa from '@/components/icons/IconeMesa'
 import { useAdminAuth } from '@/contexts/AdminAuthContext'
 import { useTheme } from 'next-themes'
 import { cn } from '@/lib/utils'
@@ -29,6 +30,7 @@ const menuItems = [
   { text: 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
   { text: 'Pedidos', icon: Receipt, path: '/admin/pedidos' },
   { text: 'Novo Pedido', icon: PlusCircle, path: '/admin/pedidos/novo' },
+  { text: 'Mesas', icon: IconeMesa, path: '/admin/mesas' },
   { text: 'Produtos', icon: Package, path: '/admin/produtos' },
   { text: 'Adicionais', icon: PlusCircle, path: '/admin/adicionais' },
   { text: 'Relatórios', icon: BarChart3, path: '/admin/relatorios' },
@@ -52,6 +54,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     if (pathname === '/admin/pedidos/novo') return 'Novo Pedido'
     if (pathname?.includes('/admin/pedidos/') && pathname?.includes('/editar')) return 'Editar Pedido'
     if (pathname?.includes('/admin/pedidos/')) return 'Detalhes do Pedido'
+    if (pathname === '/admin/mesas') return 'Mesas'
     if (pathname === '/admin/produtos') return 'Produtos'
     if (pathname === '/admin/adicionais') return 'Adicionais'
     if (pathname === '/admin/relatorios') return 'Relatórios'
@@ -93,6 +96,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {menuItems.map((item) => {
           const isActive = pathname === item.path
           const Icon = item.icon
+          const iconClassName = cn(
+            'w-5 h-5 flex-shrink-0',
+            isActive
+              ? 'text-dourado-600 dark:text-dourado-400'
+              : 'text-zinc-600 dark:text-zinc-400'
+          )
           return (
             <Link
               key={item.path}
@@ -105,12 +114,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800'
               )}
             >
-              <Icon className={cn(
-                'w-5 h-5 flex-shrink-0',
-                isActive
-                  ? 'text-dourado-600 dark:text-dourado-400'
-                  : 'text-zinc-600 dark:text-zinc-400'
-              )} />
+              <Icon className={iconClassName} />
               <span className="truncate">{item.text}</span>
             </Link>
           )

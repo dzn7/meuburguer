@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { X, Trash2, Minus, Plus, Send, ShoppingBag } from 'lucide-react'
+import IconeMesa from '@/components/icons/IconeMesa'
 import Image from 'next/image'
 import { useCarrinho } from '@/contexts/CarrinhoContext'
 import { supabase } from '@/lib/supabase'
 import ModalAlerta from './ModalAlerta'
 import SugestaoBebidas from './SugestaoBebidas'
+import ModalSelecionarMesa from './ModalSelecionarMesa'
 
 type ModalCarrinhoProps = {
   aberto: boolean
@@ -23,9 +25,8 @@ type Alerta = {
 export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) {
   const { itens, removerItem, atualizarQuantidade, limparCarrinho, total } = useCarrinho()
   const [nomeCliente, setNomeCliente] = useState('')
-  const [telefone, setTelefone] = useState('')
   const [endereco, setEndereco] = useState('')
-  const [tipoEntrega, setTipoEntrega] = useState<'entrega' | 'retirada'>('entrega')
+  const [tipoEntrega, setTipoEntrega] = useState<'entrega' | 'retirada' | 'local'>('retirada')
   const [formaPagamento, setFormaPagamento] = useState('')
   const [observacoes, setObservacoes] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -36,6 +37,8 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
     mensagem: '',
   })
   const [mostrarSugestaoBebida, setMostrarSugestaoBebida] = useState(false)
+  const [mesaSelecionada, setMesaSelecionada] = useState<number | null>(null)
+  const [modalMesaAberto, setModalMesaAberto] = useState(false)
 
   const taxaEntrega = tipoEntrega === 'entrega' ? 2.0 : 0
   const totalFinal = total + taxaEntrega
@@ -69,17 +72,6 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
     }
   }, [aberto, itens])
 
-  const formatarTelefone = (valor: string) => {
-    const numeros = valor.replace(/\D/g, '')
-    if (numeros.length <= 11) {
-      return numeros
-        .replace(/(\d{2})(\d)/, '($1) $2')
-        .replace(/(\d{5})(\d)/, '$1-$2')
-        .replace(/(-\d{4})\d+?$/, '$1')
-    }
-    return telefone
-  }
-
   const mostrarAlerta = (tipo: 'sucesso' | 'erro' | 'aviso' | 'info', titulo: string, mensagem: string) => {
     setAlerta({ aberto: true, tipo, titulo, mensagem })
   }
@@ -95,6 +87,11 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
       return
     }
 
+    if (tipoEntrega === 'local' && !mesaSelecionada) {
+      mostrarAlerta('aviso', 'Mesa obrigatória', 'Por favor, selecione uma mesa para consumo no local')
+      return
+    }
+
     if (!formaPagamento) {
       mostrarAlerta('aviso', 'Forma de pagamento', 'Por favor, selecione a forma de pagamento')
       return
@@ -107,7 +104,6 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
         .from('pedidos')
         .insert({
           nome_cliente: nomeCliente,
-          telefone: telefone,
           endereco: tipoEntrega === 'entrega' ? endereco : null,
           tipo_entrega: tipoEntrega,
           forma_pagamento: formaPagamento,
@@ -116,6 +112,7 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
           total: totalFinal,
           observacoes: observacoes || null,
           status: 'pendente',
+          mesa: tipoEntrega === 'local' ? mesaSelecionada : null,
         })
         .select()
         .single()
@@ -156,11 +153,11 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
       // Limpar carrinho e formulário ANTES de abrir WhatsApp
       limparCarrinho()
       setNomeCliente('')
-      setTelefone('')
       setEndereco('')
       setTipoEntrega('retirada')
       setFormaPagamento('')
       setObservacoes('')
+      setMesaSelecionada(null)
       
       onFechar()
       
@@ -198,9 +195,10 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
     let mensagem = `*NOVO PEDIDO - MEU BURGUER*\n\n`
     mensagem += `*Pedido:* #${pedidoId.substring(0, 8)}\n`
     mensagem += `*Nome:* ${nomeCliente}\n`
-    if (telefone) mensagem += `*Telefone:* ${telefone}\n`
-    mensagem += `*Tipo:* ${tipoEntrega === 'entrega' ? 'Entrega' : 'Retirada'}\n`
+    const tipoTexto = tipoEntrega === 'entrega' ? 'Entrega' : tipoEntrega === 'local' ? 'Consumir no Local' : 'Retirada'
+    mensagem += `*Tipo:* ${tipoTexto}\n`
     if (tipoEntrega === 'entrega') mensagem += `*Endereço:* ${endereco}\n`
+    if (tipoEntrega === 'local' && mesaSelecionada) mensagem += `*Mesa:* ${mesaSelecionada}\n`
     mensagem += `*Pagamento:* ${formaPagamento}\n\n`
 
     mensagem += `*ITENS:*\n`
@@ -375,35 +373,22 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Telefone
-                  </label>
-                  <input
-                    type="tel"
-                    value={telefone}
-                    onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
-                    placeholder="(00) 00000-0000"
-                    className="input-campo"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Tipo de Entrega *
                   </label>
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() => setTipoEntrega('entrega')}
-                      className={`flex-1 py-3 px-4 rounded-xl border-2 transition-all duration-300 ${
+                      className={`py-3 px-2 rounded-xl border-2 transition-all duration-300 text-sm ${
                         tipoEntrega === 'entrega'
                           ? 'border-dourado-600 bg-dourado-50 dark:bg-dourado-950/20 text-dourado-700 dark:text-dourado-400'
                           : 'border-gray-300 dark:border-gray-700'
                       }`}
                     >
-                      Entrega (+R$ 2,00)
+                      Entrega (+R$ 2)
                     </button>
                     <button
                       onClick={() => setTipoEntrega('retirada')}
-                      className={`flex-1 py-3 px-4 rounded-xl border-2 transition-all duration-300 ${
+                      className={`py-3 px-2 rounded-xl border-2 transition-all duration-300 text-sm ${
                         tipoEntrega === 'retirada'
                           ? 'border-dourado-600 bg-dourado-50 dark:bg-dourado-950/20 text-dourado-700 dark:text-dourado-400'
                           : 'border-gray-300 dark:border-gray-700'
@@ -411,8 +396,73 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
                     >
                       Retirada
                     </button>
+                    <button
+                      onClick={() => {
+                        setTipoEntrega('local')
+                        setMesaSelecionada(null)
+                      }}
+                      className={`py-3 px-2 rounded-xl border-2 transition-all duration-300 text-sm ${
+                        tipoEntrega === 'local'
+                          ? 'border-dourado-600 bg-dourado-50 dark:bg-dourado-950/20 text-dourado-700 dark:text-dourado-400'
+                          : 'border-gray-300 dark:border-gray-700'
+                      }`}
+                    >
+                      No Local
+                    </button>
                   </div>
                 </div>
+
+                {/* Seleção de Mesa - Quando for consumo no local */}
+                {tipoEntrega === 'local' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Mesa *
+                    </label>
+                    {mesaSelecionada ? (
+                      <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 
+                                    border-2 border-green-400 dark:border-green-600 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 
+                                        flex items-center justify-center">
+                            <IconeMesa className="w-5 h-5 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-green-700 dark:text-green-400">
+                              Mesa {mesaSelecionada}
+                            </p>
+                            <p className="text-xs text-green-600 dark:text-green-500">
+                              Selecionada para seu pedido
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setModalMesaAberto(true)}
+                          className="text-sm font-medium text-green-700 dark:text-green-400 
+                                   hover:text-green-800 dark:hover:text-green-300 underline"
+                        >
+                          Trocar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (!nomeCliente.trim()) {
+                            mostrarAlerta('aviso', 'Nome obrigatório', 'Informe seu nome antes de selecionar a mesa')
+                            return
+                          }
+                          setModalMesaAberto(true)
+                        }}
+                        className="w-full flex items-center justify-center gap-2 py-4 px-4 
+                                 border-2 border-dashed border-amber-400 dark:border-amber-600 
+                                 rounded-xl text-amber-700 dark:text-amber-400 font-medium
+                                 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                      >
+                        <IconeMesa className="w-5 h-5" />
+                        Selecionar Mesa
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {tipoEntrega === 'entrega' && (
                   <div>
@@ -508,6 +558,13 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
         )}
       </div>
     </div>
+
+    <ModalSelecionarMesa
+      aberto={modalMesaAberto}
+      onFechar={() => setModalMesaAberto(false)}
+      onSelecionarMesa={(mesaNumero) => setMesaSelecionada(mesaNumero)}
+      nomeCliente={nomeCliente}
+    />
     </>
   )
 }
