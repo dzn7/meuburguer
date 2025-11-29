@@ -145,6 +145,23 @@ export default function ModalCarrinho({ aberto, onFechar }: ModalCarrinhoProps) 
         }
       }
 
+      // Se for entrega, criar registro na tabela de entregas automaticamente
+      if (tipoEntrega === 'entrega') {
+        try {
+          await supabase.from('entregas').insert({
+            pedido_id: pedido.id,
+            endereco_entrega: endereco,
+            taxa_entrega: taxaEntrega,
+            status: 'pendente',
+            observacoes: observacoes || null
+          })
+          console.log('[Entrega] Entrega criada automaticamente para pedido:', pedido.id)
+        } catch (entregaError) {
+          console.error('[Entrega] Erro ao criar entrega:', entregaError)
+          // Não bloqueia o fluxo se falhar
+        }
+      }
+
       // Gerar mensagem e URL do WhatsApp
       const mensagemWhatsApp = gerarMensagemWhatsApp(pedido.id)
       const numeroWhatsApp = '5586988414326'

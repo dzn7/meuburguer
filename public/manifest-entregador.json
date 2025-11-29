@@ -1,0 +1,27 @@
+{
+  "name": "Meu Burguer - Painel do Entregador",
+  "short_name": "MB Entregas",
+  "description": "Painel para entregadores gerenciarem suas entregas",
+  "start_url": "/entregador",
+  "display": "standalone",
+  "background_color": "#18181b",
+  "theme_color": "#22c55e",
+  "orientation": "portrait",
+  "scope": "/entregador",
+  "icons": [
+    {
+      "src": "/assets/favicon/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/favicon/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false
+}

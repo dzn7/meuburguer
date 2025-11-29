@@ -14,7 +14,10 @@ import {
   Moon, 
   Sun, 
   Menu, 
-  X
+  X,
+  Wallet,
+  Truck,
+  CalendarDays
 } from 'lucide-react'
 import IconeMesa from '@/components/icons/IconeMesa'
 import { useAdminAuth } from '@/contexts/AdminAuthContext'
@@ -31,8 +34,11 @@ const menuItems = [
   { text: 'Pedidos', icon: Receipt, path: '/admin/pedidos' },
   { text: 'Novo Pedido', icon: PlusCircle, path: '/admin/pedidos/novo' },
   { text: 'Mesas', icon: IconeMesa, path: '/admin/mesas' },
+  { text: 'Caixa', icon: Wallet, path: '/admin/caixa' },
+  { text: 'Entregas', icon: Truck, path: '/admin/entregas' },
   { text: 'Produtos', icon: Package, path: '/admin/produtos' },
   { text: 'Adicionais', icon: PlusCircle, path: '/admin/adicionais' },
+  { text: 'Análise Diária', icon: CalendarDays, path: '/admin/analise-diaria' },
   { text: 'Relatórios', icon: BarChart3, path: '/admin/relatorios' },
 ]
 
@@ -55,8 +61,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     if (pathname?.includes('/admin/pedidos/') && pathname?.includes('/editar')) return 'Editar Pedido'
     if (pathname?.includes('/admin/pedidos/')) return 'Detalhes do Pedido'
     if (pathname === '/admin/mesas') return 'Mesas'
+    if (pathname === '/admin/caixa') return 'Gestão de Caixa'
+    if (pathname === '/admin/caixa/relatorios') return 'Relatórios de Caixa'
+    if (pathname === '/admin/entregas') return 'Entregas'
     if (pathname === '/admin/produtos') return 'Produtos'
     if (pathname === '/admin/adicionais') return 'Adicionais'
+    if (pathname === '/admin/analise-diaria') return 'Análise Diária'
     if (pathname === '/admin/relatorios') return 'Relatórios'
     return 'Admin'
   }

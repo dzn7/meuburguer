@@ -10,6 +10,11 @@ import {
   Trash2,
   ShoppingCart,
   ShoppingBag,
+  CreditCard,
+  Banknote,
+  Smartphone,
+  Split,
+  X,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import ProtectedRoute from '@/components/admin/ProtectedRoute'
@@ -38,12 +43,30 @@ type Adicional = {
   preco: number
 }
 
+type Pagamento = {
+  id: string
+  forma: string
+  valor: number
+}
+
+const FORMAS_PAGAMENTO = [
+  { id: 'dinheiro', nome: 'Dinheiro', icone: Banknote, cor: 'text-green-600' },
+  { id: 'pix', nome: 'PIX', icone: Smartphone, cor: 'text-purple-600' },
+  { id: 'credito', nome: 'Crédito', icone: CreditCard, cor: 'text-blue-600' },
+  { id: 'debito', nome: 'Débito', icone: CreditCard, cor: 'text-amber-600' },
+  { id: 'vale_refeicao', nome: 'Vale Refeição', icone: CreditCard, cor: 'text-red-600' },
+]
+
 export default function NovoPedidoPage() {
   const [nomeCliente, setNomeCliente] = useState('')
   const [endereco, setEndereco] = useState('')
   const [tipoEntrega, setTipoEntrega] = useState('entrega')
   const [formaPagamento, setFormaPagamento] = useState('')
-  const [status, setStatus] = useState('pendente')
+  const [pagamentoDividido, setPagamentoDividido] = useState(false)
+  const [pagamentos, setPagamentos] = useState<Pagamento[]>([])
+  const [novoPagamentoForma, setNovoPagamentoForma] = useState('')
+  const [novoPagamentoValor, setNovoPagamentoValor] = useState('')
+  const [status, setStatus] = useState('confirmado')
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [produtosSelecionados, setProdutosSelecionados] = useState<ProdutoSelecionado[]>([])
   const [loading, setLoading] = useState(false)
@@ -187,9 +210,54 @@ export default function NovoPedidoPage() {
     return subtotal + taxaEntrega
   }
 
+  const adicionarPagamento = () => {
+    if (!novoPagamentoForma || !novoPagamentoValor) return
+    const valor = parseFloat(novoPagamentoValor)
+    if (isNaN(valor) || valor <= 0) return
+    
+    // Validar se não ultrapassa o total
+    const totalAtual = pagamentos.reduce((acc, p) => acc + p.valor, 0)
+    const total = calcularTotal()
+    
+    if (totalAtual + valor > total) {
+      alert(`Valor excede o total do pedido. Máximo permitido: R$ ${(total - totalAtual).toFixed(2)}`)
+      return
+    }
+    
+    setPagamentos([...pagamentos, {
+      id: Date.now().toString(),
+      forma: novoPagamentoForma,
+      valor
+    }])
+    setNovoPagamentoForma('')
+    setNovoPagamentoValor('')
+  }
+
+  const removerPagamento = (id: string) => {
+    setPagamentos(pagamentos.filter(p => p.id !== id))
+  }
+
+  const totalPagamentos = pagamentos.reduce((acc, p) => acc + p.valor, 0)
+  const valorRestante = calcularTotal() - totalPagamentos
+
   const salvarPedido = async () => {
-    if (!nomeCliente || !formaPagamento || produtosSelecionados.length === 0) {
-      alert('Preencha o nome do cliente, forma de pagamento e adicione pelo menos um produto')
+    if (!nomeCliente || produtosSelecionados.length === 0) {
+      alert('Preencha o nome do cliente e adicione pelo menos um produto')
+      return
+    }
+
+    // Validar pagamento
+    if (pagamentoDividido) {
+      if (pagamentos.length === 0) {
+        alert('Adicione pelo menos uma forma de pagamento')
+        return
+      }
+      if (Math.abs(valorRestante) > 0.01) {
+        alert('O valor dos pagamentos deve ser igual ao total do pedido')
+        return
+      }
+    } else if (!formaPagamento) {
+      alert('Selecione uma forma de pagamento')
       return
     }
 
@@ -203,13 +271,18 @@ export default function NovoPedidoPage() {
       const taxaEntrega = tipoEntrega === 'entrega' ? 2 : 0
       const total = subtotal + taxaEntrega
 
+      // Determinar forma de pagamento principal
+      const formaPagamentoPrincipal = pagamentoDividido 
+        ? 'Dividido' 
+        : formaPagamento
+
       const { data: pedido, error: pedidoError } = await supabase
         .from('pedidos')
         .insert({
           nome_cliente: nomeCliente,
           endereco: endereco || null,
           tipo_entrega: tipoEntrega,
-          forma_pagamento: formaPagamento,
+          forma_pagamento: formaPagamentoPrincipal,
           subtotal: subtotal,
           taxa_entrega: taxaEntrega,
           total: total,
@@ -219,6 +292,36 @@ export default function NovoPedidoPage() {
         .single()
 
       if (pedidoError) throw pedidoError
+
+      // Inserir pagamentos divididos
+      if (pagamentoDividido && pagamentos.length > 0) {
+        const pagamentosParaInserir = pagamentos.map(p => ({
+          pedido_id: pedido.id,
+          forma_pagamento: p.forma,
+          valor: p.valor
+        }))
+
+        const { error: pagamentosError } = await supabase
+          .from('pagamentos_pedido')
+          .insert(pagamentosParaInserir)
+
+        if (pagamentosError) throw pagamentosError
+      } else {
+        // Inserir pagamento único
+        const formaNormalizada = formaPagamento === 'Dinheiro' ? 'dinheiro' 
+          : formaPagamento === 'PIX' ? 'pix'
+          : formaPagamento === 'Cartão de Crédito' ? 'credito'
+          : formaPagamento === 'Cartão de Débito' ? 'debito'
+          : 'dinheiro'
+
+        await supabase
+          .from('pagamentos_pedido')
+          .insert({
+            pedido_id: pedido.id,
+            forma_pagamento: formaNormalizada,
+            valor: total
+          })
+      }
 
       // Inserir itens e seus adicionais
       for (const p of produtosSelecionados) {
@@ -254,6 +357,21 @@ export default function NovoPedidoPage() {
             .insert(adicionaisParaInserir)
 
           if (adicionaisError) throw adicionaisError
+        }
+      }
+
+      // Se for entrega, criar registro na tabela de entregas automaticamente
+      if (tipoEntrega === 'entrega') {
+        try {
+          await supabase.from('entregas').insert({
+            pedido_id: pedido.id,
+            endereco_entrega: endereco || null,
+            taxa_entrega: taxaEntrega,
+            status: 'pendente'
+          })
+          console.log('[Entrega] Entrega criada automaticamente para pedido:', pedido.id)
+        } catch (entregaError) {
+          console.error('[Entrega] Erro ao criar entrega:', entregaError)
         }
       }
 
@@ -352,24 +470,135 @@ export default function NovoPedidoPage() {
                       />
                     </div>
                   )}
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                      Forma de Pagamento *
-                    </label>
-                    <select
-                      value={formaPagamento}
-                      onChange={(e) => setFormaPagamento(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 
-                               dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white
-                               focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent
-                               cursor-pointer"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="Dinheiro">Dinheiro</option>
-                      <option value="Cartão de Débito">Cartão de Débito</option>
-                      <option value="Cartão de Crédito">Cartão de Crédito</option>
-                      <option value="PIX">PIX</option>
-                    </select>
+                  <div className="md:col-span-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Forma de Pagamento *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPagamentoDividido(!pagamentoDividido)
+                          if (!pagamentoDividido) {
+                            setFormaPagamento('')
+                          } else {
+                            setPagamentos([])
+                          }
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                          pagamentoDividido 
+                            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' 
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200'
+                        }`}
+                      >
+                        <Split className="w-3.5 h-3.5" />
+                        Dividir
+                      </button>
+                    </div>
+
+                    {!pagamentoDividido ? (
+                      <select
+                        value={formaPagamento}
+                        onChange={(e) => setFormaPagamento(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 
+                                 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white
+                                 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent
+                                 cursor-pointer"
+                      >
+                        <option value="">Selecione...</option>
+                        <option value="Dinheiro">Dinheiro</option>
+                        <option value="Cartão de Débito">Cartão de Débito</option>
+                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+                        <option value="PIX">PIX</option>
+                        <option value="Vale Refeição">Vale Refeição</option>
+                      </select>
+                    ) : (
+                      <div className="space-y-3">
+                        {/* Lista de pagamentos adicionados */}
+                        {pagamentos.length > 0 && (
+                          <div className="space-y-2">
+                            {pagamentos.map((pag) => {
+                              const forma = FORMAS_PAGAMENTO.find(f => f.id === pag.forma)
+                              const Icone = forma?.icone || CreditCard
+                              return (
+                                <div key={pag.id} className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <Icone className={`w-4 h-4 ${forma?.cor || 'text-zinc-500'}`} />
+                                    <span className="text-sm font-medium text-zinc-900 dark:text-white">
+                                      {forma?.nome || pag.forma}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-green-600">R$ {pag.valor.toFixed(2)}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removerPagamento(pag.id)}
+                                      className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {/* Adicionar novo pagamento */}
+                        <div className="flex gap-2">
+                          <select
+                            value={novoPagamentoForma}
+                            onChange={(e) => setNovoPagamentoForma(e.target.value)}
+                            className="flex-1 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 
+                                     dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white text-sm
+                                     focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          >
+                            <option value="">Forma...</option>
+                            {FORMAS_PAGAMENTO.map(f => (
+                              <option key={f.id} value={f.id}>{f.nome}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max={valorRestante > 0 ? valorRestante : 0}
+                            value={novoPagamentoValor}
+                            onChange={(e) => setNovoPagamentoValor(e.target.value)}
+                            placeholder={valorRestante > 0 ? `Máx: ${valorRestante.toFixed(2)}` : '0.00'}
+                            disabled={valorRestante <= 0}
+                            className="w-32 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 
+                                     dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white text-sm
+                                     focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+                          />
+                          <button
+                            type="button"
+                            onClick={adicionarPagamento}
+                            disabled={!novoPagamentoForma || !novoPagamentoValor || valorRestante <= 0}
+                            className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg 
+                                     disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Valor restante */}
+                        <div className={`text-sm font-medium text-right ${
+                          Math.abs(valorRestante) < 0.01 
+                            ? 'text-green-600' 
+                            : valorRestante > 0 
+                              ? 'text-amber-600' 
+                              : 'text-red-600'
+                        }`}>
+                          {Math.abs(valorRestante) < 0.01 
+                            ? '✓ Pagamento completo' 
+                            : valorRestante > 0 
+                              ? `Falta: R$ ${valorRestante.toFixed(2)}`
+                              : `Excesso: R$ ${Math.abs(valorRestante).toFixed(2)}`
+                          }
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
@@ -644,7 +873,7 @@ export default function NovoPedidoPage() {
                 </div>
                 <button
                   onClick={salvarPedido}
-                  disabled={loading || produtosSelecionados.length === 0 || !nomeCliente || !formaPagamento}
+                  disabled={loading || produtosSelecionados.length === 0 || !nomeCliente || (!pagamentoDividido && !formaPagamento) || (pagamentoDividido && (pagamentos.length === 0 || Math.abs(valorRestante) > 0.01))}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 
                            hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors
                            disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-600"
