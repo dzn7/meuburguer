@@ -276,7 +276,7 @@ export default function SaldosPage() {
 
   return (
     <ProtectedRoute><AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-x-hidden">
         {/* Cabeçalho */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -335,19 +335,19 @@ export default function SaldosPage() {
         )}
 
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Saldo Atual */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="col-span-2 lg:col-span-1 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white shadow-lg"
+            className="col-span-2 sm:col-span-1 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 sm:p-5 text-white shadow-lg"
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-green-100 text-sm font-medium">Saldo Atual</span>
-              <Wallet className="w-5 h-5 text-green-200" />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-green-100 text-xs sm:text-sm font-medium">Saldo Atual</span>
+              <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-green-200" />
             </div>
-            <p className="text-2xl sm:text-3xl font-bold">{formatarMoeda(resumo.saldoAtual)}</p>
-            <p className="text-green-200 text-xs mt-1">Consolidado de todos os caixas</p>
+            <p className="text-xl sm:text-2xl font-bold truncate">{formatarMoeda(resumo.saldoAtual)}</p>
+            <p className="text-green-200 text-xs mt-1 hidden sm:block">Consolidado</p>
           </motion.div>
 
           {/* Total Entradas */}
@@ -355,13 +355,13 @@ export default function SaldosPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800"
+            className="bg-white dark:bg-zinc-900 rounded-2xl p-4 sm:p-5 border border-zinc-200 dark:border-zinc-800"
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-zinc-600 dark:text-zinc-400 text-sm">Total Entradas</span>
-              <ArrowUpCircle className="w-5 h-5 text-green-500" />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-zinc-600 dark:text-zinc-400 text-xs sm:text-sm">Entradas</span>
+              <ArrowUpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
             </div>
-            <p className="text-xl sm:text-2xl font-bold text-green-600">{formatarMoeda(resumo.totalEntradas)}</p>
+            <p className="text-lg sm:text-xl font-bold text-green-600 truncate">{formatarMoeda(resumo.totalEntradas)}</p>
           </motion.div>
 
           {/* Total Saídas */}
@@ -369,13 +369,13 @@ export default function SaldosPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800"
+            className="bg-white dark:bg-zinc-900 rounded-2xl p-4 sm:p-5 border border-zinc-200 dark:border-zinc-800"
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-zinc-600 dark:text-zinc-400 text-sm">Total Saídas</span>
-              <ArrowDownCircle className="w-5 h-5 text-red-500" />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-zinc-600 dark:text-zinc-400 text-xs sm:text-sm">Saídas</span>
+              <ArrowDownCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
             </div>
-            <p className="text-xl sm:text-2xl font-bold text-red-600">{formatarMoeda(resumo.totalSaidas)}</p>
+            <p className="text-lg sm:text-xl font-bold text-red-600 truncate">{formatarMoeda(resumo.totalSaidas)}</p>
           </motion.div>
 
           {/* Média Diária */}
@@ -383,31 +383,31 @@ export default function SaldosPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800"
+            className="bg-white dark:bg-zinc-900 rounded-2xl p-4 sm:p-5 border border-zinc-200 dark:border-zinc-800"
           >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-zinc-600 dark:text-zinc-400 text-sm">Média/Dia</span>
-              <TrendingUp className="w-5 h-5 text-amber-500" />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-zinc-600 dark:text-zinc-400 text-xs sm:text-sm">Média/Dia</span>
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" />
             </div>
-            <p className="text-xl sm:text-2xl font-bold text-amber-600">{formatarMoeda(resumo.mediaFaturamentoDiario)}</p>
-            <p className="text-zinc-500 text-xs mt-1">{resumo.totalCaixasFechados} caixas fechados</p>
+            <p className="text-lg sm:text-xl font-bold text-amber-600 truncate">{formatarMoeda(resumo.mediaFaturamentoDiario)}</p>
+            <p className="text-zinc-500 text-xs mt-1 hidden sm:block">{resumo.totalCaixasFechados} caixas</p>
           </motion.div>
         </div>
 
         {/* Filtros */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col gap-3">
           {/* Período */}
-          <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1">
+          <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-xl p-1 overflow-x-auto">
             {[
-              { valor: '7dias', label: '7 dias' },
-              { valor: '30dias', label: '30 dias' },
-              { valor: 'mes', label: 'Este mês' },
+              { valor: '7dias', label: '7d' },
+              { valor: '30dias', label: '30d' },
+              { valor: 'mes', label: 'Mês' },
               { valor: 'todos', label: 'Todos' }
             ].map(({ valor, label }) => (
               <button
                 key={valor}
                 onClick={() => setPeriodoFiltro(valor as typeof periodoFiltro)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-1 sm:flex-none ${
                   periodoFiltro === valor
                     ? 'bg-white dark:bg-zinc-700 text-amber-600 shadow-sm'
                     : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
@@ -419,7 +419,7 @@ export default function SaldosPage() {
           </div>
 
           {/* Busca */}
-          <div className="flex-1 relative">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
             <input
               type="text"

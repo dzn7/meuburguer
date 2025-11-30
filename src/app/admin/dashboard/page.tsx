@@ -163,7 +163,36 @@ export default function Dashboard() {
   const carregarDados = async () => {
     try {
       const hoje = new Date()
-      hoje.setHours(0, 0, 0, 0)
+      const inicioDiaHoje = new Date(hoje)
+      inicioDiaHoje.setHours(0, 0, 0, 0)
+      const fimDiaHoje = new Date(hoje)
+      fimDiaHoje.setHours(23, 59, 59, 999)
+
+      // Buscar caixa aberto do dia para usar o período correto
+      const { data: caixaHoje } = await supabase
+        .from('caixas')
+        .select('*')
+        .gte('data_abertura', inicioDiaHoje.toISOString())
+        .lte('data_abertura', fimDiaHoje.toISOString())
+        .order('data_abertura', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      // Definir período para "pedidos de hoje" baseado no caixa
+      let inicioPeriodoHoje: Date
+      let fimPeriodoHoje: Date
+
+      if (caixaHoje) {
+        // Se tem caixa, usar período do caixa (abertura até fechamento ou agora)
+        inicioPeriodoHoje = new Date(caixaHoje.data_abertura)
+        fimPeriodoHoje = caixaHoje.data_fechamento 
+          ? new Date(caixaHoje.data_fechamento)
+          : new Date()
+      } else {
+        // Sem caixa, usar dia inteiro
+        inicioPeriodoHoje = inicioDiaHoje
+        fimPeriodoHoje = new Date()
+      }
 
       const { data: todosPedidos, error: errorTodos } = await supabase
         .from('pedidos')
@@ -175,7 +204,9 @@ export default function Dashboard() {
       const { data: pedidosHoje, error: errorHoje } = await supabase
         .from('pedidos')
         .select('*')
-        .gte('created_at', hoje.toISOString())
+        .gte('created_at', inicioPeriodoHoje.toISOString())
+        .lte('created_at', fimPeriodoHoje.toISOString())
+        .neq('status', 'cancelado')
         .order('created_at', { ascending: false })
 
       if (errorHoje) throw errorHoje
