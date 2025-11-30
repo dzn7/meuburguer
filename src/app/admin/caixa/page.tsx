@@ -120,6 +120,13 @@ export default function GestaoCaixaPage() {
                 <span className="hidden sm:inline">PDF</span>
               </button>
             )}
+            <Link 
+              href="/admin/caixa/saldos"
+              className="p-2.5 sm:px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+            >
+              <Wallet className="w-4 h-4" />
+              <span className="hidden sm:inline">Saldos</span>
+            </Link>
             <button onClick={carregarDados} className="p-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl transition-colors">
               <RefreshCw className="w-4 h-4" />
             </button>

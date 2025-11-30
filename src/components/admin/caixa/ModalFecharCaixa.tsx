@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Lock } from 'lucide-react'
+import { Lock, Edit3, Check } from 'lucide-react'
 import type { Funcionario, Caixa, EstatisticasCaixa } from '@/lib/tipos-caixa'
 
 type Props = {
@@ -17,36 +17,63 @@ type Props = {
 export default function ModalFecharCaixa({ 
   aberto, caixa, funcionarios, estatisticas, onFechar, onConfirmar 
 }: Props) {
-  const [valor, setValor] = useState('')
+  const [modoEdicao, setModoEdicao] = useState(false)
+  const [valorManual, setValorManual] = useState('')
   const [responsavel, setResponsavel] = useState('')
   const [observacoes, setObservacoes] = useState('')
   const [processando, setProcessando] = useState(false)
 
-  const valorFloat = parseFloat(valor) || 0
-  const diferenca = valorFloat - estatisticas.saldoAtual
+  // Valor calculado automaticamente (saldo esperado)
+  const valorCalculado = estatisticas.saldoAtual
+  
+  // Valor final a ser usado (manual se editando, senão calculado)
+  const valorFinal = modoEdicao ? (parseFloat(valorManual) || 0) : valorCalculado
+  
+  // Diferença entre valor informado e esperado
+  const diferenca = valorFinal - valorCalculado
+
+  // Resetar modo edição quando abrir o modal
+  useEffect(() => {
+    if (aberto) {
+      setModoEdicao(false)
+      setValorManual(valorCalculado.toFixed(2))
+    }
+  }, [aberto, valorCalculado])
 
   const handleConfirmar = async () => {
-    if (!valor || !responsavel) return
+    if (!responsavel) return
     
     setProcessando(true)
-    const sucesso = await onConfirmar(parseFloat(valor), responsavel, observacoes)
+    const sucesso = await onConfirmar(valorFinal, responsavel, observacoes)
     setProcessando(false)
     
     if (sucesso) {
-      setValor('')
-      setResponsavel('')
-      setObservacoes('')
+      resetarFormulario()
       onFechar()
     }
   }
 
+  const resetarFormulario = () => {
+    setModoEdicao(false)
+    setValorManual('')
+    setResponsavel('')
+    setObservacoes('')
+  }
+
   const handleFechar = () => {
     if (!processando) {
-      setValor('')
-      setResponsavel('')
-      setObservacoes('')
+      resetarFormulario()
       onFechar()
     }
+  }
+
+  const ativarEdicao = () => {
+    setValorManual(valorCalculado.toFixed(2))
+    setModoEdicao(true)
+  }
+
+  const confirmarEdicao = () => {
+    setModoEdicao(false)
   }
 
   if (!caixa) return null
@@ -113,39 +140,76 @@ export default function ModalFecharCaixa({
                 </div>
               </div>
 
+              {/* Valor de Fechamento - Calculado automaticamente */}
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Valor em Caixa (R$) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={valor}
-                  onChange={(e) => setValor(e.target.value)}
-                  placeholder="0,00"
-                  disabled={processando}
-                  className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 
-                           dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white text-lg
-                           focus:ring-2 focus:ring-red-500 focus:border-transparent
-                           disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                {valor && (
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Valor de Fechamento
+                  </label>
+                  {!modoEdicao ? (
+                    <button
+                      type="button"
+                      onClick={ativarEdicao}
+                      className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg text-amber-600 
+                               hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                      Editar
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={confirmarEdicao}
+                      className="text-xs flex items-center gap-1 px-2 py-1 rounded-lg text-green-600 
+                               hover:bg-green-50 dark:hover:bg-green-950/20 transition-colors"
+                    >
+                      <Check className="w-3 h-3" />
+                      Confirmar
+                    </button>
+                  )}
+                </div>
+
+                {modoEdicao ? (
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={valorManual}
+                    onChange={(e) => setValorManual(e.target.value)}
+                    placeholder="0,00"
+                    disabled={processando}
+                    autoFocus
+                    className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border-2 border-amber-500 
+                             rounded-xl text-zinc-900 dark:text-white text-lg
+                             focus:ring-2 focus:ring-amber-500 focus:border-transparent
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                ) : (
+                  <div className={`w-full px-4 py-3 rounded-xl text-2xl font-bold text-center ${
+                    valorCalculado >= 0 
+                      ? 'bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400 border-2 border-green-200 dark:border-green-800'
+                      : 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-2 border-red-200 dark:border-red-800'
+                  }`}>
+                    R$ {valorFinal.toFixed(2)}
+                  </div>
+                )}
+
+                {/* Mostrar diferença se estiver editando */}
+                {modoEdicao && diferenca !== 0 && (
                   <p className={`mt-2 text-sm font-medium ${
-                    diferenca === 0
-                      ? 'text-green-600 dark:text-green-400'
-                      : diferenca > 0
+                    diferenca > 0
                       ? 'text-blue-600 dark:text-blue-400'
                       : 'text-red-600 dark:text-red-400'
                   }`}>
-                    {diferenca === 0
-                      ? '✓ Valores conferem!'
-                      : diferenca > 0
+                    {diferenca > 0
                       ? `↑ Sobra de R$ ${diferenca.toFixed(2)}`
                       : `↓ Falta de R$ ${Math.abs(diferenca).toFixed(2)}`
                     }
                   </p>
                 )}
+
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
+                  Calculado: Abertura ({Number(caixa.valor_abertura).toFixed(2)}) + Entradas ({estatisticas.totalEntradas.toFixed(2)}) - Saídas ({estatisticas.totalSaidas.toFixed(2)})
+                </p>
               </div>
 
               <div>
@@ -200,7 +264,7 @@ export default function ModalFecharCaixa({
               </button>
               <button
                 onClick={handleConfirmar}
-                disabled={!valor || !responsavel || processando}
+                disabled={!responsavel || processando}
                 className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white 
                          rounded-xl font-medium transition-colors flex items-center 
                          justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"

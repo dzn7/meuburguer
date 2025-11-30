@@ -132,15 +132,41 @@ export default function AnaliseDiariaPage() {
   const carregarDadosDia = async () => {
     setCarregando(true)
     try {
-      const inicioDia = startOfDay(dataSelecionada)
-      const fimDia = endOfDay(dataSelecionada)
+      // Buscar o caixa do dia selecionado para usar o período correto
+      const inicioDiaBusca = startOfDay(dataSelecionada)
+      const fimDiaBusca = endOfDay(dataSelecionada)
       
-      // Buscar pedidos do dia
+      const { data: caixaDoDia } = await supabase
+        .from('caixas')
+        .select('*')
+        .gte('data_abertura', inicioDiaBusca.toISOString())
+        .lte('data_abertura', fimDiaBusca.toISOString())
+        .order('data_abertura', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      // Se encontrou caixa, usar período do caixa; senão, usar dia inteiro
+      let inicioPeriodo: Date
+      let fimPeriodo: Date
+
+      if (caixaDoDia) {
+        // Usar período do caixa (abertura até fechamento ou agora)
+        inicioPeriodo = new Date(caixaDoDia.data_abertura)
+        fimPeriodo = caixaDoDia.data_fechamento 
+          ? new Date(caixaDoDia.data_fechamento)
+          : new Date()
+      } else {
+        // Sem caixa, usar dia inteiro
+        inicioPeriodo = startOfDay(dataSelecionada)
+        fimPeriodo = endOfDay(dataSelecionada)
+      }
+      
+      // Buscar pedidos do período
       const { data: pedidos, error } = await supabase
         .from('pedidos')
         .select('*')
-        .gte('created_at', inicioDia.toISOString())
-        .lte('created_at', fimDia.toISOString())
+        .gte('created_at', inicioPeriodo.toISOString())
+        .lte('created_at', fimPeriodo.toISOString())
         .neq('status', 'cancelado')
         .order('created_at', { ascending: true })
 
@@ -157,9 +183,32 @@ export default function AnaliseDiariaPage() {
         })
       )
 
-      // Buscar dados do dia anterior para comparação
-      const inicioOntem = startOfDay(subDays(dataSelecionada, 1))
-      const fimOntem = endOfDay(subDays(dataSelecionada, 1))
+      // Buscar caixa do dia anterior para comparação
+      const inicioDiaAnterior = startOfDay(subDays(dataSelecionada, 1))
+      const fimDiaAnterior = endOfDay(subDays(dataSelecionada, 1))
+      
+      const { data: caixaOntem } = await supabase
+        .from('caixas')
+        .select('*')
+        .gte('data_abertura', inicioDiaAnterior.toISOString())
+        .lte('data_abertura', fimDiaAnterior.toISOString())
+        .order('data_abertura', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      // Período do dia anterior
+      let inicioOntem: Date
+      let fimOntem: Date
+
+      if (caixaOntem) {
+        inicioOntem = new Date(caixaOntem.data_abertura)
+        fimOntem = caixaOntem.data_fechamento 
+          ? new Date(caixaOntem.data_fechamento)
+          : endOfDay(subDays(dataSelecionada, 1))
+      } else {
+        inicioOntem = startOfDay(subDays(dataSelecionada, 1))
+        fimOntem = endOfDay(subDays(dataSelecionada, 1))
+      }
       
       const { data: pedidosOntem } = await supabase
         .from('pedidos')
@@ -191,8 +240,8 @@ export default function AnaliseDiariaPage() {
       
       // Processar faturamento por forma de pagamento
       const faturamentoPorPagamento = await processarFaturamentoPorPagamento(
-        inicioDia.toISOString(), 
-        fimDia.toISOString()
+        inicioPeriodo.toISOString(), 
+        fimPeriodo.toISOString()
       )
 
       // Processar horários de pico

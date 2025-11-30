@@ -165,11 +165,25 @@ export function useCaixa() {
     }
 
     try {
-      // Buscar pedidos desde a abertura do caixa (todos os status exceto cancelado)
+      // Usar a data de abertura do caixa como início do período
+      // Pedidos do caixa = pedidos criados APÓS a abertura do caixa
+      const dataAbertura = new Date(caixa.data_abertura)
+      
+      // Fim do período: 02:00 do dia seguinte (para incluir pedidos da madrugada)
+      const fimDia = new Date(dataAbertura)
+      fimDia.setDate(fimDia.getDate() + 1)
+      fimDia.setHours(2, 0, 0, 0)
+      
+      // Se o caixa ainda está aberto, usar a data atual como limite
+      const agora = new Date()
+      const limiteData = caixa.status === 'aberto' ? agora : (caixa.data_fechamento ? new Date(caixa.data_fechamento) : fimDia)
+
+      // Buscar pedidos criados APÓS a abertura do caixa
       const { data: pedidos } = await supabase
         .from('pedidos')
         .select('id, nome_cliente, total, forma_pagamento, status, tipo_entrega, created_at')
-        .gte('created_at', caixa.data_abertura)
+        .gte('created_at', dataAbertura.toISOString())
+        .lte('created_at', limiteData.toISOString())
         .neq('status', 'cancelado')
         .order('created_at', { ascending: false })
 
@@ -219,41 +233,10 @@ export function useCaixa() {
       if (caixaRes.data) {
         setCaixaAtual(caixaRes.data)
         await carregarMovimentacoes(caixaRes.data.id, caixaRes.data)
-        const pedidos = await carregarPedidosDia(caixaRes.data)
+        await carregarPedidosDia(caixaRes.data)
         
-        // Sincronizar automaticamente pedidos não sincronizados (exceto cancelados)
-        const pedidosParaSincronizar = pedidos.filter(p => !p.sincronizado && p.status !== 'cancelado')
-        for (const pedido of pedidosParaSincronizar) {
-          const mapaCategorias: Record<string, string> = {
-            'Dinheiro': 'Pedido - Dinheiro',
-            'PIX': 'Pedido - PIX',
-            'Cartão de Débito': 'Pedido - Cartão Débito',
-            'Cartão de Crédito': 'Pedido - Cartão Crédito',
-            'Cartão Débito': 'Pedido - Cartão Débito',
-            'Cartão Crédito': 'Pedido - Cartão Crédito',
-            'Espécie': 'Pedido - Dinheiro'
-          }
-          const nomeCategoria = mapaCategorias[pedido.forma_pagamento] || 'Vendas do Dia'
-          const categoria = catRes.data?.find(c => c.nome === nomeCategoria) || catRes.data?.find(c => c.nome === 'Vendas do Dia')
-          
-          if (categoria) {
-            await supabase.from('movimentacoes_caixa').insert({
-              caixa_id: caixaRes.data.id,
-              categoria_id: categoria.id,
-              tipo: 'entrada',
-              valor: pedido.total,
-              descricao: `Pedido de ${pedido.nome_cliente} - ${pedido.forma_pagamento}`,
-              forma_pagamento: pedido.forma_pagamento,
-              pedido_id: pedido.id
-            })
-          }
-        }
-        
-        // Recarregar após sincronização
-        if (pedidosParaSincronizar.length > 0) {
-          await carregarMovimentacoes(caixaRes.data.id, caixaRes.data)
-          await carregarPedidosDia(caixaRes.data)
-        }
+        // Não sincroniza automaticamente - isso será feito manualmente pelo usuário
+        // A sincronização automática causava bugs quando o caixa era aberto com "Pedidos do Dia"
       } else {
         setCaixaAtual(null)
         setMovimentacoes([])
@@ -268,37 +251,109 @@ export function useCaixa() {
     }
   }, [carregarMovimentacoes, carregarPedidosDia, carregarPedidosHoje, mostrarNotificacao])
 
-  const abrirCaixa = async (valorAbertura: number, responsavel: string, dataReferencia?: Date) => {
+  const abrirCaixa = async (
+    valorAbertura: number, 
+    responsavel: string, 
+    dataReferencia?: Date,
+    modoAbertura?: 'manual' | 'pedidos'
+  ) => {
     try {
       // Se tiver data de referência, usar ela como data de abertura
       const dataAbertura = dataReferencia ? dataReferencia.toISOString() : new Date().toISOString()
       
+      // Se modo for 'pedidos', o valor de abertura é 0 e os pedidos serão registrados como entradas
+      // Isso evita duplicação: valor inicial = 0, pedidos = entradas
+      const valorInicialReal = modoAbertura === 'pedidos' ? 0 : valorAbertura
+      
       const { data, error } = await supabase.from('caixas').insert({
         data_abertura: dataAbertura,
-        valor_abertura: valorAbertura,
+        valor_abertura: valorInicialReal,
         responsavel_abertura: responsavel,
         status: 'aberto',
         total_entradas: 0,
         total_saidas: 0,
-        saldo_esperado: valorAbertura
+        saldo_esperado: valorInicialReal
       }).select().single()
 
       if (error) throw error
 
       setCaixaAtual(data)
       setMovimentacoes([])
-      setEstatisticas({ 
-        saldoAtual: valorAbertura, 
-        totalEntradas: 0, 
-        totalSaidas: 0, 
-        quantidadeMovimentacoes: 0 
-      })
+      
+      // Se abriu com pedidos, sincronizar os pedidos do período como movimentações
+      if (modoAbertura === 'pedidos' && data) {
+        // Buscar pedidos do período
+        const inicioDia = new Date(dataAbertura)
+        inicioDia.setHours(0, 0, 0, 0)
+        
+        const fimDia = new Date(inicioDia)
+        fimDia.setDate(fimDia.getDate() + 1)
+        fimDia.setHours(2, 0, 0, 0)
+
+        const { data: pedidosDoPeriodo } = await supabase
+          .from('pedidos')
+          .select('id, nome_cliente, total, forma_pagamento, status')
+          .gte('created_at', inicioDia.toISOString())
+          .lte('created_at', fimDia.toISOString())
+          .neq('status', 'cancelado')
+
+        // Inserir todos os pedidos como movimentações em batch (mais rápido)
+        if (pedidosDoPeriodo && pedidosDoPeriodo.length > 0) {
+          const mapaCategorias: Record<string, string> = {
+            'Dinheiro': 'Pedido - Dinheiro',
+            'PIX': 'Pedido - PIX',
+            'Cartão de Débito': 'Pedido - Cartão Débito',
+            'Cartão de Crédito': 'Pedido - Cartão Crédito',
+            'Cartão Débito': 'Pedido - Cartão Débito',
+            'Cartão Crédito': 'Pedido - Cartão Crédito'
+          }
+
+          // Preparar todas as movimentações para inserção em batch
+          const movimentacoesParaInserir = pedidosDoPeriodo.map(pedido => {
+            const nomeCategoria = mapaCategorias[pedido.forma_pagamento] || 'Vendas do Dia'
+            const categoria = categoriasRef.current.find(c => c.nome === nomeCategoria) || 
+                              categoriasRef.current.find(c => c.nome === 'Vendas do Dia')
+
+            return {
+              caixa_id: data.id,
+              categoria_id: categoria?.id,
+              tipo: 'entrada',
+              valor: Number(pedido.total),
+              descricao: `Pedido de ${pedido.nome_cliente} - ${pedido.forma_pagamento}`,
+              forma_pagamento: pedido.forma_pagamento,
+              pedido_id: pedido.id
+            }
+          }).filter(m => m.categoria_id) // Filtrar apenas os que têm categoria válida
+
+          // Inserir todas as movimentações de uma vez
+          if (movimentacoesParaInserir.length > 0) {
+            await supabase.from('movimentacoes_caixa').insert(movimentacoesParaInserir)
+          }
+        }
+        
+        setEstatisticas({ 
+          saldoAtual: valorAbertura, 
+          totalEntradas: valorAbertura, 
+          totalSaidas: 0, 
+          quantidadeMovimentacoes: pedidosDoPeriodo?.length || 0 
+        })
+      } else {
+        setEstatisticas({ 
+          saldoAtual: valorAbertura, 
+          totalEntradas: 0, 
+          totalSaidas: 0, 
+          quantidadeMovimentacoes: 0 
+        })
+      }
       
       const mensagem = dataReferencia 
         ? `Caixa aberto para ${dataReferencia.toLocaleDateString('pt-BR')}!`
         : 'O caixa foi aberto com sucesso!'
       mostrarNotificacao('sucesso', 'Caixa Aberto', mensagem)
-      carregarDados()
+      
+      // Recarregar dados
+      await carregarDados()
+      
       return true
     } catch (erro) {
       console.error('Erro ao abrir caixa:', erro)
@@ -420,10 +475,29 @@ export function useCaixa() {
     }
   }
 
-  const sincronizarPedido = async (pedidoId: string, pedidoTotal: number, formaPagamento: string, nomeCliente: string) => {
+  const sincronizarPedido = async (
+    pedidoId: string, 
+    pedidoTotal: number, 
+    formaPagamento: string, 
+    nomeCliente: string,
+    silencioso: boolean = false
+  ) => {
     if (!caixaAtual) {
-      mostrarNotificacao('aviso', 'Caixa fechado', 'Abra o caixa antes de sincronizar pedidos.')
+      if (!silencioso) mostrarNotificacao('aviso', 'Caixa fechado', 'Abra o caixa antes de sincronizar pedidos.')
       return false
+    }
+
+    // Verificar se o pedido já foi sincronizado para evitar duplicação
+    const { data: jaExiste } = await supabase
+      .from('movimentacoes_caixa')
+      .select('id')
+      .eq('caixa_id', caixaAtual.id)
+      .eq('pedido_id', pedidoId)
+      .maybeSingle()
+
+    if (jaExiste) {
+      // Pedido já sincronizado, apenas atualizar lista sem notificar
+      return true
     }
 
     // Mapear forma de pagamento para categoria
@@ -437,10 +511,11 @@ export function useCaixa() {
     }
 
     const nomeCategoria = mapaCategorias[formaPagamento] || 'Vendas do Dia'
-    const categoria = categorias.find(c => c.nome === nomeCategoria) || categorias.find(c => c.nome === 'Vendas do Dia')
+    const categoria = categoriasRef.current.find(c => c.nome === nomeCategoria) || 
+                      categoriasRef.current.find(c => c.nome === 'Vendas do Dia')
 
     if (!categoria) {
-      mostrarNotificacao('erro', 'Erro', 'Categoria de pagamento não encontrada.')
+      if (!silencioso) mostrarNotificacao('erro', 'Erro', 'Categoria de pagamento não encontrada.')
       return false
     }
 
@@ -457,7 +532,7 @@ export function useCaixa() {
 
       if (error) throw error
 
-      mostrarNotificacao('sucesso', 'Sincronizado', `Pedido de R$ ${pedidoTotal.toFixed(2)} adicionado ao caixa!`)
+      // Atualizar dados silenciosamente
       await Promise.all([
         carregarMovimentacoes(caixaAtual.id, caixaAtual),
         carregarPedidosDia(caixaAtual)
@@ -465,7 +540,7 @@ export function useCaixa() {
       return true
     } catch (erro) {
       console.error('Erro ao sincronizar pedido:', erro)
-      mostrarNotificacao('erro', 'Erro', 'Não foi possível sincronizar o pedido.')
+      if (!silencioso) mostrarNotificacao('erro', 'Erro', 'Não foi possível sincronizar o pedido.')
       return false
     }
   }
@@ -476,10 +551,10 @@ export function useCaixa() {
       return false
     }
 
-    const pedidosNaoSincronizados = pedidosDia.filter(p => !p.sincronizado && p.status === 'entregue')
+    const pedidosNaoSincronizados = pedidosDia.filter(p => !p.sincronizado && p.status !== 'cancelado')
     
     if (pedidosNaoSincronizados.length === 0) {
-      mostrarNotificacao('info', 'Nada a sincronizar', 'Todos os pedidos entregues já estão no caixa.')
+      mostrarNotificacao('info', 'Nada a sincronizar', 'Todos os pedidos já estão no caixa.')
       return true
     }
 
@@ -489,13 +564,17 @@ export function useCaixa() {
         pedido.id, 
         Number(pedido.total), 
         pedido.forma_pagamento, 
-        pedido.nome_cliente
+        pedido.nome_cliente,
+        true // silencioso - não mostrar notificação individual
       )
       if (resultado) sucesso++
     }
 
-    mostrarNotificacao('sucesso', 'Sincronização completa', 
-      `${sucesso} de ${pedidosNaoSincronizados.length} pedidos sincronizados!`)
+    // Apenas uma notificação no final
+    if (sucesso > 0) {
+      mostrarNotificacao('sucesso', 'Sincronização completa', 
+        `${sucesso} pedido(s) sincronizado(s) com sucesso!`)
+    }
     return sucesso === pedidosNaoSincronizados.length
   }
 
@@ -588,19 +667,15 @@ export function useCaixa() {
             const pedidoData = new Date(pedido.created_at)
             const caixaAbertura = new Date(caixa.data_abertura)
             
-            // Sincronizar automaticamente se não for cancelado
+            // Sincronizar automaticamente se não for cancelado (silenciosamente)
             if (pedidoData >= caixaAbertura && pedido.status !== 'cancelado') {
-              const sincronizado = await sincronizarPedidoAutomatico(
+              await sincronizarPedidoAutomatico(
                 pedido.id,
                 Number(pedido.total),
                 pedido.forma_pagamento,
                 pedido.nome_cliente
               )
-              
-              if (sincronizado) {
-                mostrarNotificacao('sucesso', 'Novo Pedido!', 
-                  `${pedido.nome_cliente} - R$ ${Number(pedido.total).toFixed(2)} (${pedido.forma_pagamento})`)
-              }
+              // Não mostrar notificação - sincronização silenciosa em realtime
             }
             
             // Se foi cancelado, remover a movimentação correspondente

@@ -1,5 +1,5 @@
 // Service Worker EXCLUSIVO para Painel do Entregador
-const CACHE_VERSION = 'entregador-v1.0.0'
+const CACHE_VERSION = 'entregador-v1.1.0'
 const CACHE_NAME = `meu-burguer-entregador-${CACHE_VERSION}`
 
 // Assets essenciais para funcionamento offline

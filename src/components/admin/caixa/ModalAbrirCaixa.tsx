@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Unlock, Check, Receipt, Edit3, Calendar, RefreshCw } from 'lucide-react'
-import { format, subDays, startOfDay, endOfDay } from 'date-fns'
+import { format } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import type { Funcionario } from '@/lib/tipos-caixa'
 import type { PedidoDia } from '@/lib/useCaixa'
+
+type ModoAbertura = 'manual' | 'pedidos'
 
 type Props = {
   aberto: boolean
@@ -14,7 +16,7 @@ type Props = {
   pedidosHoje: PedidoDia[]
   totalPedidosHoje: number
   onFechar: () => void
-  onConfirmar: (valor: number, responsavel: string, dataReferencia?: Date) => Promise<boolean>
+  onConfirmar: (valor: number, responsavel: string, dataReferencia?: Date, modoAbertura?: ModoAbertura) => Promise<boolean>
 }
 
 export default function ModalAbrirCaixa({ 
@@ -33,18 +35,24 @@ export default function ModalAbrirCaixa({
   const [carregandoPedidos, setCarregandoPedidos] = useState(false)
 
   // Carregar pedidos da data selecionada
+  // Um dia de trabalho vai das 00:00 até 02:00 do dia seguinte
   const carregarPedidosData = async (data: string) => {
     setCarregandoPedidos(true)
     try {
-      const inicio = startOfDay(new Date(data + 'T00:00:00'))
-      const fim = endOfDay(new Date(data + 'T23:59:59'))
+      // Início do dia: meia-noite do dia selecionado
+      const inicioDia = new Date(data + 'T00:00:00')
+      
+      // Fim do dia: 02:00 do dia seguinte (para incluir pedidos da madrugada)
+      const fimDia = new Date(inicioDia)
+      fimDia.setDate(fimDia.getDate() + 1)
+      fimDia.setHours(2, 0, 0, 0)
 
       const { data: pedidos, error } = await supabase
         .from('pedidos')
         .select('id, nome_cliente, total, forma_pagamento, status, created_at')
-        .gte('created_at', inicio.toISOString())
-        .lte('created_at', fim.toISOString())
-        .eq('status', 'entregue')
+        .gte('created_at', inicioDia.toISOString())
+        .lte('created_at', fimDia.toISOString())
+        .neq('status', 'cancelado')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -93,7 +101,7 @@ export default function ModalAbrirCaixa({
     
     setProcessando(true)
     const dataRef = usarDataEspecifica ? new Date(dataSelecionada + 'T12:00:00') : undefined
-    const sucesso = await onConfirmar(parseFloat(valor), responsavel, dataRef)
+    const sucesso = await onConfirmar(parseFloat(valor), responsavel, dataRef, modoValor)
     setProcessando(false)
     
     if (sucesso) {
@@ -119,10 +127,10 @@ export default function ModalAbrirCaixa({
     }
   }
 
-  // Pedidos a exibir (hoje ou data selecionada)
+  // Pedidos a exibir (hoje ou data selecionada) - todos exceto cancelados
   const pedidosExibir = usarDataEspecifica ? pedidosDataSelecionada : pedidosHoje
   const totalExibir = usarDataEspecifica ? totalPedidosData : totalPedidosHoje
-  const pedidosEntregues = pedidosExibir.filter(p => p.status === 'entregue')
+  const pedidosValidos = pedidosExibir.filter(p => p.status !== 'cancelado')
 
   return (
     <AnimatePresence>
@@ -159,23 +167,25 @@ export default function ModalAbrirCaixa({
 
             <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
               {/* Opção de data específica */}
-              <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-amber-600" />
-                  <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                  <span className="text-xs sm:text-sm font-medium text-amber-700 dark:text-amber-400">
                     Registrar caixa de outra data
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setUsarDataEspecifica(!usarDataEspecifica)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                  className={`relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ${
                     usarDataEspecifica ? 'bg-amber-500' : 'bg-zinc-300 dark:bg-zinc-600'
                   }`}
                 >
-                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                    usarDataEspecifica ? 'translate-x-7' : 'translate-x-1'
-                  }`} />
+                  <span 
+                    className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200 ${
+                      usarDataEspecifica ? 'translate-x-5' : 'translate-x-0'
+                    }`} 
+                  />
                 </button>
               </div>
 
@@ -236,20 +246,20 @@ export default function ModalAbrirCaixa({
                   </button>
                 </div>
 
-                {modoValor === 'pedidos' && pedidosEntregues.length > 0 && (
+                {modoValor === 'pedidos' && pedidosValidos.length > 0 && (
                   <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl p-3 mb-3">
                     <p className="text-sm text-green-700 dark:text-green-400 font-medium mb-2">
-                      {pedidosEntregues.length} pedido(s) entregue(s){usarDataEspecifica ? ' nesta data' : ' hoje'}:
+                      {pedidosValidos.length} pedido(s){usarDataEspecifica ? ' nesta data' : ' hoje'}:
                     </p>
                     <div className="max-h-32 overflow-y-auto space-y-1">
-                      {pedidosEntregues.slice(0, 5).map(p => (
+                      {pedidosValidos.slice(0, 5).map(p => (
                         <div key={p.id} className="flex justify-between text-xs text-green-600 dark:text-green-500">
                           <span>{p.nome_cliente} ({p.forma_pagamento})</span>
                           <span>R$ {Number(p.total).toFixed(2)}</span>
                         </div>
                       ))}
-                      {pedidosEntregues.length > 5 && (
-                        <p className="text-xs text-green-500">+{pedidosEntregues.length - 5} mais...</p>
+                      {pedidosValidos.length > 5 && (
+                        <p className="text-xs text-green-500">+{pedidosValidos.length - 5} mais...</p>
                       )}
                     </div>
                     <div className="border-t border-green-200 dark:border-green-700 mt-2 pt-2 flex justify-between font-bold text-green-700 dark:text-green-400">
@@ -259,10 +269,10 @@ export default function ModalAbrirCaixa({
                   </div>
                 )}
 
-                {modoValor === 'pedidos' && pedidosEntregues.length === 0 && !carregandoPedidos && (
+                {modoValor === 'pedidos' && pedidosValidos.length === 0 && !carregandoPedidos && (
                   <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-3">
                     <p className="text-sm text-amber-700 dark:text-amber-400">
-                      Nenhum pedido entregue encontrado{usarDataEspecifica ? ' nesta data' : ' hoje'}.
+                      Nenhum pedido encontrado{usarDataEspecifica ? ' nesta data' : ' hoje'}.
                     </p>
                   </div>
                 )}
@@ -270,16 +280,18 @@ export default function ModalAbrirCaixa({
                 <input
                   type="number"
                   step="0.01"
-                  min="0"
                   value={valor}
                   onChange={(e) => setValor(e.target.value)}
-                  placeholder="0,00"
+                  placeholder="0,00 (pode ser negativo)"
                   disabled={processando || modoValor === 'pedidos'}
                   className={`w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 
                            dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-white text-lg
                            focus:ring-2 focus:ring-green-500 focus:border-transparent
                            disabled:opacity-50 ${modoValor === 'pedidos' ? 'cursor-not-allowed' : ''}`}
                 />
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  Valores negativos são permitidos para saldo devedor
+                </p>
               </div>
 
               <div>
